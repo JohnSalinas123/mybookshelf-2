@@ -1,48 +1,149 @@
-import { ipcMain } from 'electron'
-import fs from 'fs'
+import { app, ipcMain } from 'electron'
+import fs from 'fs/promises'
 import path from 'path'
-import { PDFDocument } from 'pdf-lib'
+import pdf from 'pdf-parse'
+import { fromPath } from 'pdf2pic'
 
-export const getPdfFilesData = (): void => {
-  console.log('IPC Handler Initialized')
+const pdfStoragePath = path.join(app.getPath('userData'), 'books')
+const thumbnailStoragePath = path.join(app.getPath('userData'), 'thumbnails')
+const metadataFilePath = path.join(app.getPath('userData'), 'metadata.json')
 
-  ipcMain.on('fetch-pdf-file', async (event) => {
-    const directory = 'C:/Users/salin/Desktop/books/'
 
+export const getPdfBooksData = async (): Promise<void> => {
+  const pdfStoragePath = path.join(app.getPath('userData'), 'books')
+
+  // make directory for books, moves on if already exists
+  await fs.mkdir(pdfStoragePath, { recursive: true }).catch(console.error)
+  await fs.mkdir(thumbnailStoragePath, { recursive: true }).catch(console.error)
+
+  ipcMain.handle('fetch-pdf-books', async () => {
     try {
-      const files = fs.readdirSync(directory)
-      console.log(files)
+      
+      let pdfBookMetaData = []
+      try {
+        const data = await fs.readFile(metadataFilePath, 'utf-8')
+        pdfBookMetaData = JSON.parse(data)
+      } catch(error) {
+        if (error && typeof error === 'object' && ('code' in error) && error.code !== 'ENOENT') throw error
+      }
+      
+      /*
+      const pdfBooksData = await Promise.all(
+        pdfFiles.map(async (file) => {
+          const filePath = path.join(pdfStoragePath, file)
+          const fileName = path.basename(file, '.pdf')
 
-      const pdfFilePaths = files
-        .filter((fileName) => fileName.endsWith('.pdf'))
-        .map((fileName) => path.join(directory, fileName))
+          // read file as a buffer
+          const pdfBuffer = await fs.readFile(filePath)
 
-      const fileDataObjects: Array<{ title: string | null; path: string; pageCount: number }> = []
+          const numPages = await new Promise((resolve, reject) => {
+            pdf(pdfBuffer).then((info) => resolve(info.numpages)).catch(reject)
+          })
 
-      for (const pdfFilePath of pdfFilePaths) {
-        try {
-          const arrayBuffer = await fs.promises.readFile(pdfFilePath)
-          const pdf = await PDFDocument.load(arrayBuffer)
-          const pageCount = pdf.getPageCount()
-          const title = pdf.getTitle()
+          // extract number of pages using pdf-parse
+          //const pdfInfo = await pdf(pdfBuffer)
+          //const numPages = pdfInfo.numpages
 
-          const newFileDataObj = {
-            title: title ?? 'Unknown Title',
-            path: pdfFilePath,
-            pageCount: pageCount
+          // thumbnail paths
+          const thumbnailFileName = `${fileName}.1.png`
+          const thumbnailPath = `app://thumbnails/${thumbnailFileName}`
+
+          return {
+            title: fileName,
+            file_path: filePath,
+            num_pages: numPages,
+            thumbnail_path: thumbnailPath
           }
+        })
+      )
+      */
 
-          console.log(newFileDataObj)
-          fileDataObjects.push(newFileDataObj)
-        } catch (error) {
-          console.error('Error accessing PDF data', error)
-        }
+
+      return pdfBookMetaData
+    } catch (error) {
+      console.log('Error fetching PDF books:', error)
+      throw new Error('Failed to fetch PDF books data') 
+    }
+  })
+}
+
+export const savePdfBook = async (): Promise<void> => {
+  ipcMain.on('save-pdf', async (event, filePath) => {
+    try {
+      const fileName = path.basename(filePath)
+      const destination = path.join(pdfStoragePath, fileName)
+      //const thumbnailPath = path.join(thumbnailStoragePath, `${fileName}.jpg`)
+
+      // copy pdf to storage
+      await fs.copyFile(filePath, destination)
+
+      // read pdf as a buffer
+      const pdfBuffer = await fs.readFile(destination)
+
+      // extract number of pages
+      const pdfInfo = await pdf(pdfBuffer)
+      const numPages = pdfInfo.numpages
+
+      // format filename for saving thumbnail
+      const fileNameTrim = fileName.replace('.pdf', '')
+      //console.log('Filename trimmed:', fileNameTrim)
+
+      // generate first-page thumbnail
+      const converter = fromPath(destination, {
+        density: 150,
+        saveFilename: `${fileNameTrim}`,
+        savePath: thumbnailStoragePath,
+        format: 'png',
+        width: 300
+      })
+      const pageToConvertAsImage = 1
+
+      try {
+        await converter(pageToConvertAsImage, { responseType: 'image' })
+      } catch (err) {
+        console.error('Error generating thumbnail:', err)
       }
 
-      event.reply('pdf-data', fileDataObjects)
+      interface bookMetadata {
+        title: string
+        file_path: string
+        num_pages: number
+        thumbnail_path: string
+      }
+
+      let metadata: bookMetadata[] = []
+      try {
+        const metadataJson = await fs.readFile(metadataFilePath, 'utf-8')
+        metadata = JSON.parse(metadataJson)
+      } catch (err) {
+        console.log('Metadata file not found, creating a new one')
+      }
+
+      // thumbnail url
+      const thumbnailURL = `app://thumbnails/${fileNameTrim}.1.png`
+
+      // add new book info to metadata
+      metadata.push({
+        title: fileName.replace('.pdf', ''),
+        file_path: destination,
+        num_pages: numPages,
+        thumbnail_path: thumbnailURL
+      })
+
+      // TODO: test efficiency of loading entire metadata every time a book is added
+      // -> find better way to appending to existing metadata
+      // save updated metadata
+      await fs.writeFile(metadataFilePath, JSON.stringify(metadata, null, 2))
+
+      event.sender.send('pdf-added', {
+        title: fileName.replace('.pdf', ''),
+        file_path: destination,
+        num_pages: numPages,
+        thumbnail_path: thumbnailURL
+      })
     } catch (error) {
-      console.log('Error fetching PDF files', error)
-      event.reply('pdf-paths-error')
+      console.log('Error saving PDF:', error)
+      event.sender.send('pdf-error', 'Failed to save PDF.')
     }
   })
 }
