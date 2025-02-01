@@ -1,0 +1,35 @@
+.control-bar {
+  margin-top: 20px;
+}
+
+.item {
+    background-color: #e6e3e3;
+}
+
+.item:hover {
+    background-color: white;
+}
+
+
+.thumbnail-box {
+    width: 200px;
+    height: 270px;
+    overflow: hidden;
+}
+
+.thumbnail {
+  border: 1px solid #dee2e6;
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+  object-fit: fill !important;
+  object-location: top;
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
