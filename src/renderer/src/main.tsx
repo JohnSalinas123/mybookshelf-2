@@ -7,7 +7,6 @@ import { MantineProvider } from '@mantine/core'
 
 import '@mantine/core/styles.css';
 
-console.log('Attempting to render')
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <MantineProvider>
     <BrowserRouter>
