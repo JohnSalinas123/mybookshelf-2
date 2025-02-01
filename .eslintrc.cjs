@@ -7,6 +7,9 @@ module.exports = {
     '@electron-toolkit/eslint-config-prettier'
   ],
   rules: {
-    'react/prop-types': 'off'
+    'react/prop-types': 'off',
+    'object-curly-spacing': ['off'],
+    'quotes': ['off'],
+    'prettier/prettier': 'off',
   }
 }
