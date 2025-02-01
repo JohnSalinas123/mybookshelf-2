@@ -1,25 +1,28 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, protocol, net } from 'electron'
 import { join } from 'path'
 import path from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { getPdfFilesData } from './ipcHandlers'
+import { getPdfBooksData, savePdfBook } from './ipcHandlers'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+const userDataPath = app.getPath('userData')
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1150,
+    height: 800,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      nodeIntegrationInWorker: true
     }
   })
 
@@ -41,12 +44,22 @@ function createWindow(): void {
   }
 }
 
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { bypassCSP: true, stream: true } }
+])
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+
+  protocol.handle('app', (request) => {
+    const url = request.url.substring(6) // Remove 'app://' from the start
+    const filePath = path.join(userDataPath, decodeURIComponent(url))
+    return net.fetch(`file://${filePath}`)
+  })
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -55,12 +68,14 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  console.log('potato')
-
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  getPdfFilesData()
+  // retrive book metadata
+  await getPdfBooksData()
+
+  // save pdf ipcHandler
+  await savePdfBook()
 
   createWindow()
 
