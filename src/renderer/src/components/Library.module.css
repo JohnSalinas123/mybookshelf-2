@@ -1,20 +1,50 @@
+.library-grid {
+  --row-gap: 50px;
+  --col-gap: 30px;
+  --num-cols: 4;
+  --item-max-width: 200px;
+
+  display: grid;
+  grid-template-columns: repeat(var(--num-cols), 1fr);
+  grid-gap: var(--row-gap) var(--col-gap);
+  
+
+  width: 100%;
+  justify-content: end;
+
+  
+}
+
 .control-bar {
-  margin-top: 20px;
+  width: 100%;
+  padding: 25px 0
 }
 
 .item {
-    background-color: #e6e3e3;
+  background-color: #f8f6f6 !important;
+  transition: transform, 0.2s ease-in-out;
+  transition: background-color 0.3 ease-in;
+  cursor: pointer;
+
+  display: flex !important;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  max-width: 240px;
+  width: 100%;
+
 }
 
 .item:hover {
-    background-color: white;
+  background-color: white !important;
+  transform: scale(1.05);
+
 }
 
-
 .thumbnail-box {
-    width: 200px;
-    height: 270px;
-    overflow: hidden;
+  width: 200px !important;
+  height: 270px !important;
+  overflow: hidden;
 }
 
 .thumbnail {
@@ -23,7 +53,7 @@
   height: 100%;
   border-radius: 20px;
   object-fit: fill !important;
-  object-location: top;
+  object-position: top;
 }
 
 .title {

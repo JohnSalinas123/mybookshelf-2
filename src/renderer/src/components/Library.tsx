@@ -2,10 +2,20 @@ import { useState, useEffect } from 'react'
 import { pdfjs } from 'react-pdf'
 import { IoIosAddCircleOutline } from 'react-icons/io'
 
-import './Library.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
-import { Button, FileButton, Group, Loader, Paper, Stack, Image, Text } from '@mantine/core'
+import {
+  Button,
+  FileButton,
+  Group,
+  Loader,
+  Paper,
+  Stack,
+  Image,
+  Text,
+  Skeleton
+} from '@mantine/core'
+import { useNavigate } from 'react-router'
 
 import classes from './Library.module.css'
 
@@ -26,35 +36,25 @@ interface PdfBookData {
 export const Library: React.FC = () => {
   const [pdfBooksData, setPdfBooksData] = useState<PdfBookData[]>([])
   const [loading, setLoading] = useState(true)
+  const [saveLoading, setSaveLoading] = useState(false)
 
   useEffect(() => {
-
     // fetch pdf books data to load initial view with user's books
     fetchPdfBooks()
 
-
-    //window.electron.ipcRenderer.send('fetch-pdf-books')
-
-    /*
-    window.electron.ipcRenderer.on(
-      'pdf-data',
-      (_event: IpcRendererEvent, pdfFileDataObjs: PdfBookData[]) => {
-        setPdfBooksData(pdfFileDataObjs)
-        setLoading(false)
-      }
-    )
-    */
-
-    window.electron.ipcRenderer.on('pdf-added', (_event, newBookData) => {
+    const handlePdfAdded = (_event, newBookData): void => {
       setPdfBooksData((prevBookData) => [...prevBookData, newBookData])
-    })
+      setSaveLoading(false)
+    }
+
+    window.electron.ipcRenderer.on('pdf-added', handlePdfAdded)
 
     return (): void => {
-      window.electron.ipcRenderer.removeAllListeners('pdf-data')
+      window.electron.ipcRenderer.removeAllListeners('pdf-added')
     }
   }, [])
-  
-  const fetchPdfBooks = async(): Promise<void> => {
+
+  const fetchPdfBooks = async (): Promise<void> => {
     try {
       const pdfBooksData = await window.electron.ipcRenderer.invoke('fetch-pdf-books')
       setPdfBooksData(pdfBooksData)
@@ -62,14 +62,14 @@ export const Library: React.FC = () => {
     } catch (error) {
       console.log('Error fetching PDF books:', error)
     }
-
   }
 
   const handleFileSelect = (file: File | null): void => {
-    if (!file) return
+    if (!file || saveLoading) return
 
     // send fild path to main process
     window.electron.ipcRenderer.send('save-pdf', file.path)
+    setSaveLoading(true)
   }
 
   return (
@@ -99,17 +99,22 @@ export const Library: React.FC = () => {
               </FileButton>
             </Group>
 
-            <div className="library-grid">
+            <div className={classes['library-grid']}>
               {pdfBooksData &&
                 pdfBooksData.map((bookData, index) => (
-                  <LibraryItem
-                    key={index}
-                    pdfFilePath={bookData.file_path}
-                    pdfNumPages={bookData.num_pages}
-                    pdfTitle={bookData.title}
-                    pdfThumbnailURL={bookData.thumbnail_path}
-                  />
+                  <>
+                    <LibraryItem
+                      key={index}
+                      pdfFilePath={bookData.file_path}
+                      pdfNumPages={bookData.num_pages}
+                      pdfTitle={bookData.title}
+                      pdfThumbnailURL={bookData.thumbnail_path}
+                    />
+                  </>
                 ))}
+              <Skeleton key={-1} visible={saveLoading}>
+                <div className={classes.skeleton}></div>
+              </Skeleton>
             </div>
           </Stack>
         </>
@@ -131,40 +136,41 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   pdfNumPages,
   pdfThumbnailURL
 }) => {
+  const navigate = useNavigate()
 
   console.log(pdfTitle, pdfFilePath, pdfNumPages, pdfThumbnailURL)
 
   //const handleClick = (data: string): void => {
   //  console.log(`Navigating to Reader with PDF data`)
-  //  navigate(`/reader`, {state: {data}})
+  //
   //}
 
-  /*
   const handleOpenPdf = (): void => {
     // Open the PDF in the browser
-    const pdfUrl = `app://${pdfFilePath}` // You can use the full path here
-    console.log(pdfUrl)
-    window.open(pdfUrl, '_blank') // Open in a new browser tab
+    const pdfPath = `app://books/${pdfTitle}.pdf` // You can use the full path here
+    navigate(`/reader`, { state: { pdfPath } })
   }
-  */
 
   return (
     <>
-      <Paper pt="md" pl="md" pr="md" pb="xs" shadow="sm" radius="md" withBorder className={classes.item} >
+      <Paper
+        pt="md"
+        pl="md"
+        pr="md"
+        pb="xs"
+        shadow="sm"
+        radius="md"
+        withBorder
+        className={classes.item}
+        onClick={handleOpenPdf}
+      >
         <div className={classes['thumbnail-box']}>
-          <Image
-            fit="contain"
-            className={classes.thumbnail}
-            radius="md"
-            src={pdfThumbnailURL}
-          />
+          <Image fit="contain" className={classes.thumbnail} radius="md" src={pdfThumbnailURL} />
         </div>
         <Text p={5} className={classes.title}>
-            {typeof pdfTitle !== 'undefined' ? pdfTitle : 'No title found'}
+          {typeof pdfTitle !== 'undefined' ? pdfTitle : 'No title found'}
         </Text>
       </Paper>
     </>
   )
 }
-
-
