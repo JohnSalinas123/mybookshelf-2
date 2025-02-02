@@ -89,16 +89,6 @@ export const Library: React.FC = () => {
       ) : (
         <>
           <Stack gap={0}>
-            <Group className={classes['control-bar']}>
-              <FileButton onChange={(file) => handleFileSelect(file)} accept="application/pdf">
-                {(props) => (
-                  <Button {...props} radius="xl" rightSection={<IoIosAddCircleOutline />}>
-                    Add new book
-                  </Button>
-                )}
-              </FileButton>
-            </Group>
-
             <div className={classes['library-grid']}>
               {pdfBooksData &&
                 pdfBooksData.map((bookData, index) => (

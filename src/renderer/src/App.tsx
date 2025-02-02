@@ -4,17 +4,19 @@ import { Library } from './components/Library'
 
 import classes from './App.module.css'
 import { Reader } from './components/ReaderPage'
+import { TitleBar } from './components/TitleBar'
+
 
 function App(): JSX.Element {
-  //const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
-
+  
+  
   return (
     <>
-      {/*<Navbar />*/}
+      <TitleBar />
       <div className={classes['main-container']}>
         <Routes>
           <Route index path="/" element={<Library />}></Route>
-          <Route path="/reader" element={<Reader/>}></Route>
+          <Route path="/reader" element={<Reader />}></Route>
         </Routes>
       </div>
     </>

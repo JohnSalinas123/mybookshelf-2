@@ -22,11 +22,6 @@ export const Reader: React.FC = () => {
   return (
     <>  
         <div className={classes.reader}>
-          <div className={classes.control}>
-            <ActionIcon variant="filled" aria-label="Settings" onClick={handleBackButton}>
-              <FaArrowLeft   style={{ width: '70%', height: '70%' }} />
-            </ActionIcon>
-          </div>
           <iframe
             src={pdfPath}
             style={{ width: '100%', height: '100%', border: 'none' }}
