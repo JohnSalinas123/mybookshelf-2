@@ -1,0 +1,14 @@
+.reader {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+}
+
+
+
+.control {
+  height: 100%;  
+  padding: 10px 10px;
+  background-color: rgb(199, 199, 196);
+}
