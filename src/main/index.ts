@@ -11,8 +11,10 @@ const __dirname = path.dirname(__filename)
 
 const userDataPath = app.getPath('userData')
 
+
+
 function createWindow(): void {
-  // Create the browser window.
+
   const mainWindow = new BrowserWindow({
     width: 1150,
     height: 800,
@@ -49,10 +51,9 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { bypassCSP: true, stream: true } }
 ])
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+
 app.whenReady().then(async () => {
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -79,6 +80,27 @@ app.whenReady().then(async () => {
   await savePdfBook()
 
   createWindow()
+
+  ipcMain.on('window-minimize', () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) window.minimize();
+  })
+
+  ipcMain.on('window-maximize', () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) {
+      if (window.isMaximized()) {
+        window.unmaximize();
+      } else {
+        window.maximize()
+      }
+    }
+  })
+
+  ipcMain.on('window-close', () => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) window.close();
+  })
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

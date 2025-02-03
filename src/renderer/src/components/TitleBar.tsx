@@ -5,12 +5,23 @@ import { VscChromeClose } from 'react-icons/vsc'
 import classes from './TitleBar.module.css'
 import { FaBook } from 'react-icons/fa'
 
-
 interface TitleBarProps {
   controls: React.ReactNode
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({ controls }) => {
+  const handleMinimize = (): void => {
+    window.electron.windowControls.minimize()
+  }
+
+  const handleMaximize = (): void => {
+    window.electron.windowControls.maximize()
+  }
+
+  const handleClose = (): void => {
+    window.electron.windowControls.close()
+  }
+ 
   return (
     <>
       <div className={classes['title-bar']}>
@@ -23,13 +34,13 @@ export const TitleBar: React.FC<TitleBarProps> = ({ controls }) => {
         </div>
 
         <ul className={classes['main-controls']}>
-          <li>
+          <li onClick={handleMinimize}>
             <VscChromeMinimize />
           </li>
-          <li>
+          <li onClick={handleMaximize}>
             <VscChromeMaximize />
           </li>
-          <li>
+          <li onClick={handleClose}>
             <VscChromeClose />
           </li>
         </ul>
