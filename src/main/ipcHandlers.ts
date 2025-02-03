@@ -8,7 +8,6 @@ const pdfStoragePath = path.join(app.getPath('userData'), 'books')
 const thumbnailStoragePath = path.join(app.getPath('userData'), 'thumbnails')
 const metadataFilePath = path.join(app.getPath('userData'), 'metadata.json')
 
-
 export const getPdfBooksData = async (): Promise<void> => {
   const pdfStoragePath = path.join(app.getPath('userData'), 'books')
 
@@ -18,51 +17,19 @@ export const getPdfBooksData = async (): Promise<void> => {
 
   ipcMain.handle('fetch-pdf-books', async () => {
     try {
-      
       let pdfBookMetaData = []
       try {
         const data = await fs.readFile(metadataFilePath, 'utf-8')
         pdfBookMetaData = JSON.parse(data)
-      } catch(error) {
-        if (error && typeof error === 'object' && ('code' in error) && error.code !== 'ENOENT') throw error
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
+          throw error
       }
-      
-      /*
-      const pdfBooksData = await Promise.all(
-        pdfFiles.map(async (file) => {
-          const filePath = path.join(pdfStoragePath, file)
-          const fileName = path.basename(file, '.pdf')
-
-          // read file as a buffer
-          const pdfBuffer = await fs.readFile(filePath)
-
-          const numPages = await new Promise((resolve, reject) => {
-            pdf(pdfBuffer).then((info) => resolve(info.numpages)).catch(reject)
-          })
-
-          // extract number of pages using pdf-parse
-          //const pdfInfo = await pdf(pdfBuffer)
-          //const numPages = pdfInfo.numpages
-
-          // thumbnail paths
-          const thumbnailFileName = `${fileName}.1.png`
-          const thumbnailPath = `app://thumbnails/${thumbnailFileName}`
-
-          return {
-            title: fileName,
-            file_path: filePath,
-            num_pages: numPages,
-            thumbnail_path: thumbnailPath
-          }
-        })
-      )
-      */
-
 
       return pdfBookMetaData
     } catch (error) {
       console.log('Error fetching PDF books:', error)
-      throw new Error('Failed to fetch PDF books data') 
+      throw new Error('Failed to fetch PDF books data')
     }
   })
 }
@@ -108,6 +75,7 @@ export const savePdfBook = async (): Promise<void> => {
         title: string
         file_path: string
         num_pages: number
+        cur_page: number
         thumbnail_path: string
       }
 
@@ -127,6 +95,7 @@ export const savePdfBook = async (): Promise<void> => {
         title: fileName.replace('.pdf', ''),
         file_path: destination,
         num_pages: numPages,
+        cur_page: 0,
         thumbnail_path: thumbnailURL
       })
 
@@ -139,6 +108,7 @@ export const savePdfBook = async (): Promise<void> => {
         title: fileName.replace('.pdf', ''),
         file_path: destination,
         num_pages: numPages,
+        cur_page: 0,
         thumbnail_path: thumbnailURL
       })
     } catch (error) {

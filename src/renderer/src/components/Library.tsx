@@ -11,7 +11,8 @@ import {
   Stack,
   Image,
   Text,
-  Skeleton
+  Skeleton,
+  Progress
 } from '@mantine/core'
 import { useNavigate } from 'react-router'
 
@@ -23,6 +24,7 @@ interface PdfBookData {
   title: string | null
   file_path: string
   num_pages: number
+  cur_page: number
   thumbnail_path: string
 }
 
@@ -32,14 +34,13 @@ interface PdfBookData {
 //}
 
 interface LibraryProps {
-  setTitleBarControls: (controls: React.ReactNode) => void;
+  setTitleBarControls: (controls: React.ReactNode) => void
 }
 
-export const Library: React.FC<LibraryProps> = ({setTitleBarControls}) => {
+export const Library: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
   const [pdfBooksData, setPdfBooksData] = useState<PdfBookData[]>([])
   const [loading, setLoading] = useState(true)
   const [saveLoading, setSaveLoading] = useState(false)
-
 
   useEffect(() => {
     // clear title bar controls
@@ -47,9 +48,9 @@ export const Library: React.FC<LibraryProps> = ({setTitleBarControls}) => {
 
     // set add book button
     setTitleBarControls(
-      <FileButton onChange={(file) => handleFileSelect(file)} accept="application/pdf" >
+      <FileButton onChange={(file) => handleFileSelect(file)} accept="application/pdf">
         {(props) => (
-          <Button variant="outline" className='sub-button' {...props} radius="sm">
+          <Button variant="outline" className="sub-button" {...props} radius="sm">
             Add book
           </Button>
         )}
@@ -113,7 +114,8 @@ export const Library: React.FC<LibraryProps> = ({setTitleBarControls}) => {
                     <LibraryItem
                       key={index}
                       pdfFilePath={bookData.file_path}
-                      pdfNumPages={bookData.num_pages}
+                      pdfTotalNumPages={bookData.num_pages}
+                      pdfCurrentPage={bookData.cur_page}
                       pdfTitle={bookData.title}
                       pdfThumbnailURL={bookData.thumbnail_path}
                     />
@@ -133,29 +135,34 @@ export const Library: React.FC<LibraryProps> = ({setTitleBarControls}) => {
 interface LibraryItemProps {
   pdfTitle: string | null
   pdfFilePath: string
-  pdfNumPages: number
+  pdfTotalNumPages: number
+  pdfCurrentPage: number
   pdfThumbnailURL: string
 }
 
 export const LibraryItem: React.FC<LibraryItemProps> = ({
   pdfTitle,
   pdfFilePath,
-  pdfNumPages,
+  pdfTotalNumPages,
+  pdfCurrentPage,
   pdfThumbnailURL
 }) => {
   const navigate = useNavigate()
 
-  console.log(pdfTitle, pdfFilePath, pdfNumPages, pdfThumbnailURL)
+  console.log(pdfTitle, pdfFilePath, pdfTotalNumPages, pdfCurrentPage, pdfThumbnailURL)
 
   //const handleClick = (data: string): void => {
   //  console.log(`Navigating to Reader with PDF data`)
   //
   //}
 
+  const percentageRead = (pdfCurrentPage / pdfTotalNumPages)*100
+  console.log(percentageRead)
+
   const handleOpenPdf = (): void => {
     // Open the PDF in the browser
     const pdfPath = `app://books/${pdfTitle}.pdf` // You can use the full path here
-    navigate(`/reader`, { state: { pdfPath } })
+    navigate(`/reader`, { state: { pdfPath, pdfTotalNumPages , pdfCurrentPage } })
   }
 
   return (
@@ -177,6 +184,10 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
         <Text p={5} className={classes.title}>
           {typeof pdfTitle !== 'undefined' ? pdfTitle : 'No title found'}
         </Text>
+        <div className={classes['pageinfo-box']}>
+          <Text>{`${pdfCurrentPage}/${pdfTotalNumPages}`}</Text>
+          <Progress value={percentageRead} />
+        </div>
       </Paper>
     </>
   )

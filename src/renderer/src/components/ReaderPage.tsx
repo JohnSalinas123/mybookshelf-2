@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 import classes from './ReaderPage.module.css'
 import { useEffect } from 'react';
-import { ActionIcon } from '@mantine/core';
+import { ActionIcon, Text } from '@mantine/core';
 import { FaArrowLeft } from 'react-icons/fa';
 
 interface ReaderPageProps {
@@ -12,7 +12,7 @@ interface ReaderPageProps {
 
 export const Reader: React.FC<ReaderPageProps> = ({setTitleBarControls}) => {
   const location = useLocation()
-  const { pdfPath } = location.state || {}
+  const { pdfPath, pdfTotalNumPages , pdfCurrentPage } = location.state || {}
 
   const navigate = useNavigate();
 
@@ -36,7 +36,9 @@ export const Reader: React.FC<ReaderPageProps> = ({setTitleBarControls}) => {
 
   return (
     <>  
+      <Text>{`${pdfCurrentPage}/${pdfTotalNumPages}`}</Text>
         <div className={classes.reader}>
+          
           <iframe
             src={pdfPath}
             style={{ width: '100%', height: '100%', border: 'none' }}
