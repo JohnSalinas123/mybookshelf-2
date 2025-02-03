@@ -1,22 +1,37 @@
-import { ActionIcon } from '@mantine/core'
-import { useLocation } from 'react-router-dom'
+
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import classes from './ReaderPage.module.css'
-import { FaArrowLeft  } from 'react-icons/fa'
-import { useNavigate } from 'react-router';
+import { useEffect } from 'react';
+import { ActionIcon } from '@mantine/core';
+import { FaArrowLeft } from 'react-icons/fa';
 
-export const Reader: React.FC = () => {
+interface ReaderPageProps {
+  setTitleBarControls: (controls: React.ReactNode) => void;
+}
+
+export const Reader: React.FC<ReaderPageProps> = ({setTitleBarControls}) => {
   const location = useLocation()
   const { pdfPath } = location.state || {}
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // clear title bar controls
+    setTitleBarControls(null)
+
+    // set back button to navigate back to reader
+    setTitleBarControls(
+      <ActionIcon variant="outline" className="sub-button" aria-label="Settings" onClick={() => navigate(-1)}>
+        <FaArrowLeft />
+    </ActionIcon>
+    )
+
+
+  }, [])
 
   if (!pdfPath) {
     return <div>Error: No PDF data found.</div>
-  }
-
-  const handleBackButton = (): void => {
-    navigate(`/`)
   }
 
   return (

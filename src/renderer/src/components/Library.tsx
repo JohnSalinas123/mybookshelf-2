@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react'
 import { pdfjs } from 'react-pdf'
-import { IoIosAddCircleOutline } from 'react-icons/io'
 
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import {
   Button,
   FileButton,
-  Group,
   Loader,
   Paper,
   Stack,
@@ -33,12 +31,31 @@ interface PdfBookData {
 //  returnValue?: unknown
 //}
 
-export const Library: React.FC = () => {
+interface LibraryProps {
+  setTitleBarControls: (controls: React.ReactNode) => void;
+}
+
+export const Library: React.FC<LibraryProps> = ({setTitleBarControls}) => {
   const [pdfBooksData, setPdfBooksData] = useState<PdfBookData[]>([])
   const [loading, setLoading] = useState(true)
   const [saveLoading, setSaveLoading] = useState(false)
 
+
   useEffect(() => {
+    // clear title bar controls
+    setTitleBarControls(null)
+
+    // set add book button
+    setTitleBarControls(
+      <FileButton onChange={(file) => handleFileSelect(file)} accept="application/pdf" >
+        {(props) => (
+          <Button variant="outline" className='sub-button' {...props} radius="sm">
+            Add book
+          </Button>
+        )}
+      </FileButton>
+    )
+
     // fetch pdf books data to load initial view with user's books
     fetchPdfBooks()
 
