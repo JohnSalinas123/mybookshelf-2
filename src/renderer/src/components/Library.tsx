@@ -162,7 +162,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   const handleOpenPdf = (): void => {
     // Open the PDF in the browser
     const pdfPath = `app://books/${pdfTitle}.pdf` // You can use the full path here
-    navigate(`/reader`, { state: { pdfPath, pdfTotalNumPages , pdfCurrentPage } })
+    navigate(`/reader`, { state: { pdfTitle, pdfPath, pdfTotalNumPages , pdfCurrentPage } })
   }
 
   return (
