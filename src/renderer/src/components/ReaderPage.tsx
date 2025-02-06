@@ -183,6 +183,24 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
     }
   }
 
+  const handlePageChange = (value: number):void => {
+    const newPage = Math.min(Math.max(1, value), Number(pdfTotalNumPages))
+    setCurrentPage(newPage)
+    setVisibleRange({
+      start: Math.max(1, newPage - 2),
+      end: Math.min(newPage + 2, Number(pdfTotalNumPages))
+    })
+
+    // scroll to the center page after range update
+    setTimeout(() => {
+      const targetPage = pageRefs.current[newPage - 1]
+      if (targetPage) {
+        targetPage.scrollIntoView({behavior: 'instant', block: 'center'})
+      }
+    }, 200)
+
+  }
+
   console.log('PAGES TO RENDER', pagesToRender)
 
   return (
@@ -191,18 +209,21 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
         <div className={classes['pdf-controls']}>
           <div className={classes.left}>
             <RxHamburgerMenu />
-            <Text>{pdfTitle}</Text>
+            <Text>{`${pdfTitle}`}</Text>
           </div>
           <div className={classes.center}>
             <NumberInput
-            value={currentPage}
+              value={currentPage}
               aria-label="Current page input"
+              onBlur={() => handlePageChange(Number(currentPage)) }
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  handlePageChange(Number(currentPage))
+                }
+              }}
               onChange={(value) => {
                 if (value !== null && typeof value === 'number') {
-                  setVisibleRange({
-                    start: value,
-                    end: Math.min(value + 4, Number(pdfTotalNumPages))
-                  })
+                  setCurrentPage(value)
                 }
               }}
               className={classes['page-input']}

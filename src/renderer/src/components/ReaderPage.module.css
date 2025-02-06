@@ -33,7 +33,6 @@
   align-items: center;
   gap: 15px;
   text-align: left;
-  
 }
 
 .center {
@@ -57,12 +56,12 @@
 
 .page-input {
   width: 40px;
-  background-color: #191B1C;
+  background-color: #191b1c;
   margin-right: 5px;
 }
 
 .page-input div {
-  background-color: #191B1C;
+  background-color: #191b1c;
   border: none;
 }
 
@@ -74,7 +73,7 @@
   border: none;
   padding: 0;
   text-align: center;
-  background-color: #191B1C;
+  background-color: #191b1c;
   color: white;
 }
 
@@ -83,7 +82,7 @@
 }
 
 .page {
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .pdf .textLayer {
