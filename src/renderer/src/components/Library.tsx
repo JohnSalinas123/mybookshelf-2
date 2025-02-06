@@ -110,16 +110,14 @@ export const Library: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
             <div className={classes['library-grid']}>
               {pdfBooksData &&
                 pdfBooksData.map((bookData, index) => (
-                  <>
-                    <LibraryItem
-                      key={index}
-                      pdfFilePath={bookData.file_path}
-                      pdfTotalNumPages={bookData.num_pages}
-                      pdfCurrentPage={bookData.cur_page}
-                      pdfTitle={bookData.title}
-                      pdfThumbnailURL={bookData.thumbnail_path}
-                    />
-                  </>
+                  <LibraryItem
+                    key={index}
+                    pdfFilePath={bookData.file_path}
+                    pdfTotalNumPages={bookData.num_pages}
+                    pdfCurrentPage={bookData.cur_page}
+                    pdfTitle={bookData.title}
+                    pdfThumbnailURL={bookData.thumbnail_path}
+                  />
                 ))}
               <Skeleton key={-1} visible={saveLoading}>
                 <div className={classes.skeleton}></div>
