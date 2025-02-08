@@ -13,7 +13,7 @@
 }
 
 .document {
-  width: 600px;
+  width: 100%;
 }
 
 .pdf-controls {
@@ -47,6 +47,19 @@
   justify-content: center;
 }
 
+.control-group {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.divider {
+  align-self: center !important;
+  margin: 0 15px
+}
+
 .right {
   display: flex;
   flex-direction: row;
@@ -71,7 +84,7 @@
 }
 
 .page-input input {
-  height: 25px !important;
+  height: 25px;
   font-size: 16px;
   min-height: 25px;
   border-radius: 0;
@@ -84,6 +97,24 @@
 
 .page-total {
   font-size: 16px !important;
+}
+
+.size-percent {
+  width: 40px;
+  background-color: #191b1c;
+  margin: 0 5px;
+
+}
+
+.size-percent input {
+  height: 25px;
+  min-height: 25px;
+  text-align: center;
+  border-radius: 0;
+  border: none;
+  padding: 0;
+  color: white;
+  background-color: #191b1c;
 }
 
 .page {
