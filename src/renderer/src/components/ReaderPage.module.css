@@ -12,8 +12,13 @@
   background-color: #535659;
 }
 
+.document {
+  width: 600px;
+}
+
 .pdf-controls {
   height: 60px;
+  min-height: 60px;
   display: flex;
   flex-direction: row;
   justify-content: space-between;

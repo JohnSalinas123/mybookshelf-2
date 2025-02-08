@@ -1,14 +1,17 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import classes from './ReaderPage.module.css'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActionIcon, NumberInput, Stack, Text } from '@mantine/core'
 import { FaArrowLeft } from 'react-icons/fa'
-import { Document, Page } from 'react-pdf'
+import { Document, Page, pdfjs } from 'react-pdf'
 
 import { AiFillPrinter } from 'react-icons/ai'
 import { IoSettingsSharp } from 'react-icons/io5'
 import { RxHamburgerMenu } from 'react-icons/rx'
+
+import { VariableSizeList as List } from 'react-window'
+import React from 'react'
 
 interface ReaderPageProps {
   setTitleBarControls: (controls: React.ReactNode) => void
@@ -19,22 +22,26 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
   const { pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } = location.state || {}
   const navigate = useNavigate()
 
-  // state to track book page data
-  const [currentPage, setCurrentPage] = useState<number | string>(Number(pdfCurrentPage))
+  const [currentPage, setCurrentPage] = useState<number | string>(Number(pdfCurrentPage) || 1)
 
-  const initialPage = Math.max(1, Number(pdfCurrentPage) || 1)
+  const [numPages] = useState<number>(pdfTotalNumPages || 0)
 
-  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({
-    start: Math.max(1, initialPage - 2),
-    end: Math.min(initialPage + 2, Number(pdfTotalNumPages))
-  })
-
-  console.log('INTIAL VISIBLE RANGE:', visibleRange.start, visibleRange.end)
-
-  // refs to page containers
-  const pageRefs = useRef<(HTMLDivElement | null)[]>([])
-
+  const [pdfDocument, setPdfDocument] = useState<pdfjs.PDFDocumentProxy | null>(null)
+  const [pageHeights, setPageHeights] = useState<number[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<List>(null)
+
+  const [listHeight, setListHeight] = useState(window.innerHeight - 90)
+
+  const viewportWidth = 590
+
+  useEffect(() => {
+    const updateHeight = (): void => setListHeight(window.innerHeight - 90)
+
+    window.addEventListener('resize', updateHeight)
+
+    return (): void => window.removeEventListener('resize', updateHeight)
+  }, [])
 
   useEffect(() => {
     // set currentPage state to pdfCurrentPage
@@ -57,151 +64,46 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
   }, [])
 
   useEffect(() => {
-    console.log('USE EFFECT OUTER')
-    if (!containerRef.current) return
+    if (!pdfDocument) return
 
-    console.log('USE EFFECT INNER')
-
-    const expansionObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const target = entry.target as HTMLElement
-          console.log(
-            `Observed page ${target.dataset.pageNumber}: isIntersecting = ${entry.isIntersecting}`
-          )
-          if (entry.isIntersecting) {
-            setVisibleRange((prev) => {
-              const pageNumber = Number(target.dataset.pageNumber)
-              console.log(
-                `Intersected Page: ${pageNumber}, Visible Range: ${prev.start}-${prev.end}`
-              )
-
-              if (pageNumber === prev.start) {
-                // expanding page upwards
-                if (prev.start <= 1) return prev
-                console.log('Expanding upwards')
-                return {
-                  start: Math.max(1, prev.start - 3),
-                  end: prev.end
-                }
-              } else if (pageNumber === prev.end && prev.end < Number(pdfTotalNumPages)) {
-                // expanding downwards
-                console.log('Expanding downwards')
-                return {
-                  start: prev.start,
-                  end: Math.min(Number(pdfTotalNumPages), prev.end + 3)
-                }
-              }
-              return prev
-            })
-          }
+    const loadPageHeights = async (): Promise<void> => {
+      const pageNumbers = Array.from({ length: pdfDocument.numPages }, (_, i) => i + 1)
+      const heights = await Promise.all(
+        pageNumbers.map(async (pageNumber) => {
+          const page = await pdfDocument.getPage(pageNumber)
+          const viewport = page.getViewport({ scale: 1 })
+          const scale = viewportWidth / viewport.width
+          return viewport.height * scale
         })
-      },
-      { root: containerRef.current, threshold: 0.1 }
-    )
+      )
 
-    // observer for tracking the current page
-    const currentPageObserver = new IntersectionObserver(
-      (entries) => {
-        let closestPage: number | null = null;
-        let closestDistance = Infinity;
-
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-
-          const target = entry.target as HTMLElement;
-          const pageNumber = Number(target.dataset.pageNumber)
-          const distanceFromCenter = Math.abs(entry.boundingClientRect.top)
-
-          // find page closest to the center
-          if (distanceFromCenter < closestDistance) {
-            closestDistance = distanceFromCenter;
-            closestPage = pageNumber;
-          }
-        });
-
-        if (closestPage !== null) {
-          console.log("CLOSEST PAGE: ", closestPage)
-          setCurrentPage(closestPage)
-        }
-
-
-      }, {root: containerRef.current, threshold: 0.5}
-    );
-
-    // setup current page observer
-    const pagesInRange = pagesToRender;
-    pagesInRange.forEach((pageNumber) => {
-      const pageElem = pageRefs.current[pageNumber - 1];
-
-      if (pageElem) {
-        pageElem.dataset.pageNumber = pageNumber.toString();
-        currentPageObserver.observe(pageElem)
-      }
-    });
-
-    const timer = setTimeout(() => {
-      
-      // setup for expansion observer
-      // observe the first rendered page in current range
-      const firstPageIndex = visibleRange.start - 1
-      const firstPageEl = pageRefs.current[firstPageIndex]
-
-      // observe the last rendered page in current range
-      const lastPageIndex = visibleRange.end - 1
-      const lastPageEl = pageRefs.current[lastPageIndex]
-
-      console.log('Observing First:', firstPageIndex + 1, firstPageEl)
-      console.log('Observing Last:', lastPageIndex + 1, lastPageEl)
-
-      if (firstPageEl) {
-        firstPageEl.dataset.pageNumber = (firstPageIndex + 1).toString()
-        expansionObserver.observe(firstPageEl)
-      }
-
-      if (lastPageEl) {
-        lastPageEl.dataset.pageNumber = (lastPageIndex + 1).toString()
-        expansionObserver.observe(lastPageEl)
-      }
-
-    }, 300)
-
-    return (): void => {
-      clearTimeout(timer)
-      expansionObserver.disconnect()
+      setPageHeights(heights)
+      listRef.current?.resetAfterIndex(0)
     }
-  }, [visibleRange, pdfTotalNumPages])
 
-  if (!pdfPath || !pdfTotalNumPages || (!pdfCurrentPage && pdfCurrentPage != 0)) {
-    return <div>Error: No PDF data found.</div>
-  }
+    loadPageHeights()
+  }, [pdfDocument])
 
-  const pagesToRender: number[] = []
-  for (let i = visibleRange.start; i <= visibleRange.end; i++) {
-    if (i >= 1 && i <= Number(pdfTotalNumPages)) {
-      pagesToRender.push(i)
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollToItem(Number(currentPage) - 1, 'start')
+    }
+  }, [currentPage, pageHeights])
+
+  const handlePageChange = (value: string | number): void => {
+    const parsedValue = typeof value === 'string' ? parseInt(value, 10) : value
+
+    if (!isNaN(parsedValue)) {
+      setCurrentPage(parsedValue)
     }
   }
 
-  const handlePageChange = (value: number):void => {
-    const newPage = Math.min(Math.max(1, value), Number(pdfTotalNumPages))
-    setCurrentPage(newPage)
-    setVisibleRange({
-      start: Math.max(1, newPage - 2),
-      end: Math.min(newPage + 2, Number(pdfTotalNumPages))
-    })
+  const SPACER_HEIGHT = 16
 
-    // scroll to the center page after range update
-    setTimeout(() => {
-      const targetPage = pageRefs.current[newPage - 1]
-      if (targetPage) {
-        targetPage.scrollIntoView({behavior: 'instant', block: 'center'})
-      }
-    }, 200)
-
-  }
-
-  console.log('PAGES TO RENDER', pagesToRender)
+  const getPageHeight = useCallback(
+    (index: number) => (pageHeights[index] || 800) + SPACER_HEIGHT,
+    [pageHeights]
+  )
 
   return (
     <>
@@ -215,17 +117,7 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
             <NumberInput
               value={currentPage}
               aria-label="Current page input"
-              onBlur={() => handlePageChange(Number(currentPage)) }
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  handlePageChange(Number(currentPage))
-                }
-              }}
-              onChange={(value) => {
-                if (value !== null && typeof value === 'number') {
-                  setCurrentPage(value)
-                }
-              }}
+              onChange={handlePageChange}
               className={classes['page-input']}
               allowDecimal={false}
               allowNegative={false}
@@ -241,40 +133,28 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
             <IoSettingsSharp className={classes['sub-controls']} />
           </div>
         </div>
+
+        {/* PDF Viewer */}
         <div className={classes.reader} ref={containerRef}>
-          <Document
-            className={classes.pdf}
-            file={pdfPath}
-            loading={''}
-            onLoadSuccess={() => {
-              if (typeof currentPage != 'number') return
-
-              const container = containerRef.current
-              const targetPage = pageRefs.current[currentPage - 1]
-
-              if (container && targetPage) {
-                container.style.overflow = 'hidden'
-                requestAnimationFrame(() => {
-                  container.scrollTop = targetPage.offsetTop - container.offsetHeight / 2
-                  container.style.overflow = ''
-                })
-              }
-
-              setTimeout(() => {
-                const targetPage = pageRefs.current[currentPage - 1]
-                console.log(currentPage)
-                console.log('SCROLLING TO PAGE:', targetPage)
-                if (targetPage) {
-                  targetPage.scrollIntoView({ behavior: 'instant', block: 'center' })
-                }
-              }, 200)
-            }}
-          >
-            {pagesToRender.map((pageNumber) => (
-              <div key={pageNumber} ref={(el) => (pageRefs.current[pageNumber - 1] = el)}>
-                <Page className={classes.page} scale={1.5} pageNumber={pageNumber} />
-              </div>
-            ))}
+          <Document file={pdfPath} onLoadSuccess={setPdfDocument} className={classes.document}>
+            {pdfDocument && pageHeights.length > 0 && (
+              <List
+                ref={listRef}
+                className={classes['page-list']}
+                width="100%"
+                height={listHeight} // Container height
+                itemCount={numPages}
+                itemSize={getPageHeight}
+                estimatedItemSize={800} // Avoid flickering
+                overscanCount={2} // Load extra pages before and after
+              >
+                {({ index, style }) => (
+                  <div style={style}>
+                    <Page pageNumber={index + 1} width={viewportWidth} />
+                  </div>
+                )}
+              </List>
+            )}
           </Document>
         </div>
       </Stack>
