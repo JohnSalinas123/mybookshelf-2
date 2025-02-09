@@ -8,7 +8,7 @@ import { MantineProvider } from '@mantine/core'
 import '@mantine/core/styles.css';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <MantineProvider>
+  <MantineProvider defaultColorScheme="dark">
     <BrowserRouter>
       <App />
     </BrowserRouter>
