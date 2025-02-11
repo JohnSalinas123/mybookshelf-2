@@ -3,8 +3,7 @@ import { VscChromeMaximize } from 'react-icons/vsc'
 import { VscChromeClose } from 'react-icons/vsc'
 
 import classes from './TitleBar.module.css'
-import { FaBook } from 'react-icons/fa'
-import { ActionIcon, MantineColorScheme } from '@mantine/core'
+import { ActionIcon, MantineColorScheme, Image } from '@mantine/core'
 import cx from 'clsx'
 
 import { LuMoon, LuSun } from 'react-icons/lu'
@@ -37,7 +36,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       <div className={classes['title-bar']}>
         <div className={classes['inner']}>
           <div className={classes['logo']}>
-            <FaBook className={classes.icon} />
+            <Image className={classes.icon} src="bookshelf.png" />
             <div className={classes.title}>MyBookshelf</div>
           </div>
           <div className={classes['sub-controls']}>{controls}</div>
