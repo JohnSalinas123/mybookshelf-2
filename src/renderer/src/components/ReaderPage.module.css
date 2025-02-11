@@ -117,8 +117,23 @@
   background-color: #191b1c;
 }
 
+
 .page {
   margin-bottom: 15px;
+  width: 100%;
+  min-width: 100% !important;
+}
+
+:global .page-element {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+:global .page-element canvas,
+:global .page-element .textLayer,
+:global .page-element .annotationLayer {
+  width: 100% !important;
+  min-width: 100% !important;
 }
 
 .pdf .textLayer {

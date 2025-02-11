@@ -222,15 +222,15 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
                   ref={listRef}
                   className={classes['page-list']}
                   width="100%"
-                  height={listHeight} // Container height
+                  height={listHeight}
                   itemCount={numPages}
                   itemSize={getPageHeight}
-                  estimatedItemSize={800} // Avoid flickering
-                  overscanCount={2} // Load extra pages before and after
+                  estimatedItemSize={800}
+                  overscanCount={2}
                 >
                   {({ index, style }) => (
                     <div style={style}>
-                      <Page pageNumber={index + 1} width={pageSize - 10} />
+                      <Page className="page-element" pageNumber={index + 1} width={pageSize} />
                     </div>
                   )}
                 </List>
