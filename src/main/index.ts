@@ -11,10 +11,7 @@ const __dirname = path.dirname(__filename)
 
 const userDataPath = app.getPath('userData')
 
-
-
 function createWindow(): void {
-
   const mainWindow = new BrowserWindow({
     width: 1150,
     height: 800,
@@ -28,6 +25,8 @@ function createWindow(): void {
     },
     titleBarStyle: 'hidden'
   })
+
+  mainWindow.webContents.openDevTools()
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -51,9 +50,7 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { bypassCSP: true, stream: true } }
 ])
 
-
 app.whenReady().then(async () => {
-
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -82,15 +79,15 @@ app.whenReady().then(async () => {
   createWindow()
 
   ipcMain.on('window-minimize', () => {
-    const window = BrowserWindow.getFocusedWindow();
-    if (window) window.minimize();
+    const window = BrowserWindow.getFocusedWindow()
+    if (window) window.minimize()
   })
 
   ipcMain.on('window-maximize', () => {
-    const window = BrowserWindow.getFocusedWindow();
+    const window = BrowserWindow.getFocusedWindow()
     if (window) {
       if (window.isMaximized()) {
-        window.unmaximize();
+        window.unmaximize()
       } else {
         window.maximize()
       }
@@ -98,8 +95,8 @@ app.whenReady().then(async () => {
   })
 
   ipcMain.on('window-close', () => {
-    const window = BrowserWindow.getFocusedWindow();
-    if (window) window.close();
+    const window = BrowserWindow.getFocusedWindow()
+    if (window) window.close()
   })
 
   app.on('activate', function () {
