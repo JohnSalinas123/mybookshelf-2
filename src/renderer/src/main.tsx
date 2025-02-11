@@ -2,11 +2,19 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 
 import './index.css'
-import { BrowserRouter } from 'react-router-dom'
+import { HashRouter } from 'react-router-dom'
+import { MantineProvider } from '@mantine/core'
 
-console.log('Attempting to render')
+import '@mantine/core/styles.css'
+
+//const theme = createTheme({
+//
+//})
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <BrowserRouter>
-    <App />
-  </BrowserRouter>
+  <MantineProvider defaultColorScheme="dark">
+    <HashRouter>
+      <App />
+    </HashRouter>
+  </MantineProvider>
 )

@@ -54,8 +54,7 @@ html,body {
     25px 50px 62.9px -2.5px hsl(var(--shadow-color) / 0.34);
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: var(--sub);
+  color: white;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

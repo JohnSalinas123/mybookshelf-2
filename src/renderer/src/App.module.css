@@ -1,0 +1,25 @@
+.main-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  overflow-y: auto;
+  height: calc(100% - 30px);
+  width: 100%;
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 8px;
+}
+  
+/* Track */
+::-webkit-scrollbar-track {
+    background-color: #dbdbdb;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+    background-color: grey;
+    border-radius: 10px;
+}
