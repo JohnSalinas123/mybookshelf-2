@@ -12,13 +12,23 @@ import {
   Image,
   Text,
   Skeleton,
-  Progress
+  Progress,
+  useComputedColorScheme,
 } from '@mantine/core'
 import { useNavigate } from 'react-router'
 
 import classes from './Library.module.css'
 
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+if (process.env.NODE_ENV === 'development') {
+  // In dev, the public folder is served at root:
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+} else {
+  // In production, use the URL relative to the current location.
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    'pdf.worker.min.mjs',
+    window.location.href
+  ).toString()
+}
 
 interface PdfBookData {
   title: string | null
@@ -147,20 +157,18 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
 }) => {
   const navigate = useNavigate()
 
+  //const theme = useMantineTheme();
+  const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
+
   console.log(pdfTitle, pdfFilePath, pdfTotalNumPages, pdfCurrentPage, pdfThumbnailURL)
 
-  //const handleClick = (data: string): void => {
-  //  console.log(`Navigating to Reader with PDF data`)
-  //
-  //}
-
-  const percentageRead = (pdfCurrentPage / pdfTotalNumPages)*100
+  const percentageRead = (pdfCurrentPage / pdfTotalNumPages) * 100
   console.log(percentageRead)
 
   const handleOpenPdf = (): void => {
     // Open the PDF in the browser
     const pdfPath = `app://books/${pdfTitle}.pdf` // You can use the full path here
-    navigate(`/reader`, { state: { pdfTitle, pdfPath, pdfTotalNumPages , pdfCurrentPage } })
+    navigate(`/reader`, { state: { pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } })
   }
 
   return (
@@ -173,8 +181,8 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
         shadow="sm"
         radius="md"
         withBorder
-        className={classes.item}
         onClick={handleOpenPdf}
+        className={`${classes.item} ${computedColorScheme === 'dark' ? classes.dark : classes.light}`}
       >
         <div className={classes['thumbnail-box']}>
           <Image fit="contain" className={classes.thumbnail} radius="md" src={pdfThumbnailURL} />
