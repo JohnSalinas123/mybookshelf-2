@@ -58,7 +58,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
 
     return (
       <div style={{ width: pageSize }}>
-        <Document file={pdfPath} onLoadSuccess={setPdfDocument} className={classes.document}>
+        <Document loading={<PDFLoadingPage pageHeight={pageHeight} />} file={pdfPath} onLoadSuccess={setPdfDocument} className={classes.document}>
           <List
             ref={listRef}
             className={classes['page-list']}
@@ -89,7 +89,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
                   className="page-element"
                   pageNumber={index + 1}
                   width={pageSize}
-                  loading={<PDFLoadingPage />}
+                  loading={<PDFLoadingPage pageHeight={pageHeight} />}
                 />
               </div>
             )}
@@ -102,10 +102,16 @@ export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
 
 PDFViewer.displayName = 'PdfViewer'
 
-const PDFLoadingPage: React.FC = () => {
+interface PDFLoadingPageProps {
+  pageHeight: number
+}
+
+const PDFLoadingPage: React.FC<PDFLoadingPageProps> = ({pageHeight}) => {
+
+  console.log("PAGE HEIGHT LOADING", pageHeight)
   return (
     <>
-      <Center h="100%" w="100%">
+      <Center h={pageHeight} w="100%">
         <Loader color="blue" />
       </Center>
     </>
