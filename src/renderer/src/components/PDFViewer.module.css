@@ -1,0 +1,26 @@
+.document {
+  width: 100%;
+}
+
+:global .page-element canvas,
+:global .page-element .textLayer,
+:global .page-element .annotationLayer {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+:global .page-element {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+.page {
+    margin-bottom: 15px;
+    width: 100%;
+    min-width: 100% !important;
+  }
+  
+  .pdf .textLayer {
+    width: 600px !important;
+    height: 100% !important;
+  }
