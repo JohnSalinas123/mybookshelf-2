@@ -18,16 +18,17 @@ interface ReaderPageProps {
 
 export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
   const location = useLocation()
-  const { pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } = location.state || {}
+  const { pdfUUID, pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } = location.state || {}
   const navigate = useNavigate()
 
-  //const [pendingPage, ]
+  // saved state
+  const [pdfPageSaved, setPdfPageSaved] = useState<boolean>(true)
+
   const [currentPage, setCurrentPage] = useState<number | string>(Number(pdfCurrentPage))
   const [initialPage, setInitialPage] = useState<number>(pdfCurrentPage)
 
   const [numPages] = useState<number>(pdfTotalNumPages || 0)
 
-  //const [pdfDocument, setPdfDocument] = useState<pdfjs.PDFDocumentProxy | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<List>(null)
 
@@ -50,6 +51,33 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
     window.addEventListener('resize', updateHeight)
 
     return (): void => window.removeEventListener('resize', updateHeight)
+  }, [])
+
+  const currentPageRef = useRef(currentPage)
+
+  useEffect(() => {
+    currentPageRef.current = currentPage
+    console.log("UPDATING currentPageRef.current", currentPageRef.current)
+  }, [currentPage])
+
+  useEffect(() => {
+    const savePageInterval = setInterval(async () => {
+      const currentPageVal = Number(currentPageRef.current)
+      console.log(`Saving current page, ${currentPageVal}, of ${pdfTitle}`)
+      console.log(pdfUUID)
+      const pdfSavedBoolean = await window.electron.ipcRenderer.invoke(
+        'save-pdf-page',
+        pdfUUID,
+        currentPageVal
+      )
+      if (!pdfSavedBoolean) {
+        console.log('Failed to save current page')
+      } else {
+        console.log(`Saved page, ${currentPage}`)
+      }
+    }, 15000)
+
+    return (): void => clearInterval(savePageInterval)
   }, [])
 
   // set title bar controls
