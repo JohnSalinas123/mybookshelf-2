@@ -17,7 +17,7 @@ import {
 } from '@mantine/core'
 import { useNavigate } from 'react-router'
 
-import classes from './Library.module.css'
+import classes from './LibraryPage.module.css'
 
 if (process.env.NODE_ENV === 'development') {
   // In dev, the public folder is served at root:
@@ -122,7 +122,6 @@ export const Library: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
                 pdfBooksData.map((bookData, index) => (
                   <LibraryItem
                     key={index}
-                    pdfFilePath={bookData.file_path}
                     pdfTotalNumPages={bookData.num_pages}
                     pdfCurrentPage={bookData.cur_page}
                     pdfTitle={bookData.title}
@@ -142,7 +141,6 @@ export const Library: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
 
 interface LibraryItemProps {
   pdfTitle: string | null
-  pdfFilePath: string
   pdfTotalNumPages: number
   pdfCurrentPage: number
   pdfThumbnailURL: string
@@ -150,7 +148,6 @@ interface LibraryItemProps {
 
 export const LibraryItem: React.FC<LibraryItemProps> = ({
   pdfTitle,
-  pdfFilePath,
   pdfTotalNumPages,
   pdfCurrentPage,
   pdfThumbnailURL
@@ -160,10 +157,10 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   //const theme = useMantineTheme();
   const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
 
-  console.log(pdfTitle, pdfFilePath, pdfTotalNumPages, pdfCurrentPage, pdfThumbnailURL)
+  //console.log(pdfTitle, pdfFilePath, pdfTotalNumPages, pdfCurrentPage, pdfThumbnailURL)
 
   const percentageRead = (pdfCurrentPage / pdfTotalNumPages) * 100
-  console.log(percentageRead)
+  //console.log(percentageRead)
 
   const handleOpenPdf = (): void => {
     // Open the PDF in the browser
