@@ -47,7 +47,7 @@ interface LibraryProps {
   setTitleBarControls: (controls: React.ReactNode) => void
 }
 
-export const Library: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
+export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
   const [pdfBooksData, setPdfBooksData] = useState<PdfBookData[]>([])
   const [loading, setLoading] = useState(true)
   const [saveLoading, setSaveLoading] = useState(false)
