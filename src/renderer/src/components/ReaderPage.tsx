@@ -22,10 +22,11 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   const navigate = useNavigate()
 
   // saved state
-  const [pdfPageSaved, setPdfPageSaved] = useState<boolean>(true)
+  //const [pdfPageSaved, setPdfPageSaved] = useState<boolean>(true)
 
   const [currentPage, setCurrentPage] = useState<number | string>(Number(pdfCurrentPage))
   const [initialPage, setInitialPage] = useState<number>(pdfCurrentPage)
+  const [lastSavedPage, setLastSavedPage] = useState<number>(pdfCurrentPage)
 
   const [numPages] = useState<number>(pdfTotalNumPages || 0)
 
@@ -54,6 +55,8 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   }, [])
 
   const currentPageRef = useRef(currentPage)
+  const lastSavedPageRef = useRef(lastSavedPage)
+  
 
   useEffect(() => {
     currentPageRef.current = currentPage
@@ -63,6 +66,12 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   useEffect(() => {
     const savePageInterval = setInterval(async () => {
       const currentPageVal = Number(currentPageRef.current)
+
+      if (Number(lastSavedPageRef.current) == currentPageVal) return; 
+
+      console.log(Number(lastSavedPageRef.current), Number(currentPageRef.current))
+
+
       console.log(`Saving current page, ${currentPageVal}, of ${pdfTitle}`)
       console.log(pdfUUID)
       const pdfSavedBoolean = await window.electron.ipcRenderer.invoke(
@@ -70,12 +79,15 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
         pdfUUID,
         currentPageVal
       )
-      if (!pdfSavedBoolean) {
-        console.log('Failed to save current page')
-      } else {
+      console.log(pdfSavedBoolean)
+      if (pdfSavedBoolean) {
         console.log(`Saved page, ${currentPage}`)
+        setLastSavedPage(currentPageVal)
+        lastSavedPageRef.current = currentPageVal
+      } else {
+        console.log('Failed to save current page')
       }
-    }, 15000)
+    }, 5000)
 
     return (): void => clearInterval(savePageInterval)
   }, [])
