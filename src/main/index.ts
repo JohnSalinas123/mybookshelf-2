@@ -3,7 +3,7 @@ import { join } from 'path'
 import path from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { getPdfBooksData, savePdfBook } from './ipcHandlers'
+import { getPdfBooksData, savePdfBook, savePdfPage } from './ipcHandlers'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -26,7 +26,7 @@ function createWindow(): void {
     titleBarStyle: 'hidden'
   })
 
-  mainWindow.webContents.openDevTools()
+  //mainWindow.webContents.openDevTools()
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -75,6 +75,9 @@ app.whenReady().then(async () => {
 
   // save pdf ipcHandler
   await savePdfBook()
+
+  // save pdf page ipcHandler
+  await savePdfPage()
 
   createWindow()
 

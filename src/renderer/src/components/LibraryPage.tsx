@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { pdfjs } from 'react-pdf'
 
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -14,10 +14,12 @@ import {
   Skeleton,
   Progress,
   useComputedColorScheme,
+  Textarea
 } from '@mantine/core'
 import { useNavigate } from 'react-router'
 
-import classes from './Library.module.css'
+import classes from './LibraryPage.module.css'
+import { UUID } from 'crypto'
 
 if (process.env.NODE_ENV === 'development') {
   // In dev, the public folder is served at root:
@@ -31,6 +33,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 interface PdfBookData {
+  id: UUID
   title: string | null
   file_path: string
   num_pages: number
@@ -38,16 +41,11 @@ interface PdfBookData {
   thumbnail_path: string
 }
 
-//type IpcRendererEvent = {
-//  sender: Electron.IpcRenderer
-//  returnValue?: unknown
-//}
-
 interface LibraryProps {
   setTitleBarControls: (controls: React.ReactNode) => void
 }
 
-export const Library: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
+export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
   const [pdfBooksData, setPdfBooksData] = useState<PdfBookData[]>([])
   const [loading, setLoading] = useState(true)
   const [saveLoading, setSaveLoading] = useState(false)
@@ -122,7 +120,7 @@ export const Library: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
                 pdfBooksData.map((bookData, index) => (
                   <LibraryItem
                     key={index}
-                    pdfFilePath={bookData.file_path}
+                    pdfUUID={bookData.id}
                     pdfTotalNumPages={bookData.num_pages}
                     pdfCurrentPage={bookData.cur_page}
                     pdfTitle={bookData.title}
@@ -141,35 +139,58 @@ export const Library: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
 }
 
 interface LibraryItemProps {
+  pdfUUID: UUID
   pdfTitle: string | null
-  pdfFilePath: string
   pdfTotalNumPages: number
   pdfCurrentPage: number
   pdfThumbnailURL: string
 }
 
 export const LibraryItem: React.FC<LibraryItemProps> = ({
+  pdfUUID,
   pdfTitle,
-  pdfFilePath,
   pdfTotalNumPages,
   pdfCurrentPage,
   pdfThumbnailURL
 }) => {
+  const [editingTitle, setEditingTitle] = useState<boolean>(false)
+  const [bookTitle, setBookTitle] = useState<string>(pdfTitle || 'No title found')
+
   const navigate = useNavigate()
 
-  //const theme = useMantineTheme();
-  const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-  console.log(pdfTitle, pdfFilePath, pdfTotalNumPages, pdfCurrentPage, pdfThumbnailURL)
+  //const theme = useMantineTheme();
+  const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
+
+  //console.log(pdfTitle, pdfFilePath, pdfTotalNumPages, pdfCurrentPage, pdfThumbnailURL)
 
   const percentageRead = (pdfCurrentPage / pdfTotalNumPages) * 100
-  console.log(percentageRead)
+  //console.log(percentageRead)
 
+  // handleOpenPdf opens file explorer for user to select a pdf to add
   const handleOpenPdf = (): void => {
+    // disabled if currently editting the library item's title
+    if (editingTitle) return
+
     // Open the PDF in the browser
     const pdfPath = `app://books/${pdfTitle}.pdf` // You can use the full path here
-    navigate(`/reader`, { state: { pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } })
+    navigate(`/reader`, { state: { pdfUUID, pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } })
   }
+
+  // TODO: handleSaveTitle saves new title of pdf book
+  // handleSaveTitle saved new title of pdf
+  //const handleSaveTitle = ():void => {
+  //
+  //}
+
+  useEffect(() => {
+    if (editingTitle && textareaRef.current) {
+      const textarea = textareaRef.current
+      textarea.focus()
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+    }
+  }, [editingTitle])
 
   return (
     <>
@@ -187,9 +208,42 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
         <div className={classes['thumbnail-box']}>
           <Image fit="contain" className={classes.thumbnail} radius="md" src={pdfThumbnailURL} />
         </div>
-        <Text p={5} className={classes.title}>
-          {typeof pdfTitle !== 'undefined' ? pdfTitle : 'No title found'}
-        </Text>
+        <div className={`${classes['title-box']} ${editingTitle ? classes['editing-border'] : ''}`}>
+          {editingTitle ? (
+            <Textarea
+              ref={textareaRef}
+              aria-label="Title textarea input"
+              value={bookTitle}
+              p={0}
+              className={classes['title-textarea']}
+              variant="unstyled"
+              maxRows={2}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) => setBookTitle(event.currentTarget.value)}
+              onBlur={() => {
+                setTimeout(() => setEditingTitle(false), 100)
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  setEditingTitle(false)
+                }
+              }}
+              autoFocus
+            />
+          ) : (
+            <Text
+              onClick={(event) => {
+                event.stopPropagation()
+                setEditingTitle(true)
+              }}
+              p={0}
+              className={classes.title}
+            >
+              {bookTitle}
+            </Text>
+          )}
+        </div>
         <div className={classes['pageinfo-box']}>
           <Text>{`${pdfCurrentPage}/${pdfTotalNumPages}`}</Text>
           <Progress value={percentageRead} />

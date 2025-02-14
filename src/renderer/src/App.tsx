@@ -1,9 +1,9 @@
 import { Route, Routes } from 'react-router-dom'
 //import { Navbar } from './components/Navbar'
-import { Library } from './components/Library'
+import { LibraryPage } from './components/LibraryPage'
 
 import classes from './App.module.css'
-import { Reader } from './components/ReaderPage'
+import { ReaderPage } from './components/ReaderPage'
 import { TitleBar } from './components/TitleBar'
 import { useState } from 'react'
 import { useComputedColorScheme, useMantineColorScheme } from '@mantine/core'
@@ -20,8 +20,8 @@ function App(): JSX.Element {
       <TitleBar controls={titleBarControls} setColorScheme={setColorScheme} computedColorScheme={computedColorScheme}/>
       <div className={classes['main-container']}>
         <Routes>
-          <Route index path="/" element={<Library setTitleBarControls={setTitleBarControls}/>} ></Route>
-          <Route path="/reader" element={<Reader setTitleBarControls={setTitleBarControls}/>}></Route>
+          <Route index path="/" element={<LibraryPage setTitleBarControls={setTitleBarControls}/>} ></Route>
+          <Route path="/reader" element={<ReaderPage setTitleBarControls={setTitleBarControls}/>}></Route>
         </Routes>
       </div>
     </>

@@ -1,32 +1,35 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import classes from './ReaderPage.module.css'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ActionIcon, Divider, NumberInput, Stack, Text } from '@mantine/core'
 import { FaArrowLeft } from 'react-icons/fa'
-import { Document, Page, pdfjs } from 'react-pdf'
 
 import { AiFillPrinter, AiOutlineMinus, AiOutlinePlus } from 'react-icons/ai'
 import { IoSettingsSharp } from 'react-icons/io5'
 
 import { VariableSizeList as List } from 'react-window'
 import React from 'react'
+import { PDFViewer } from './PDFViewer'
 
 interface ReaderPageProps {
   setTitleBarControls: (controls: React.ReactNode) => void
 }
 
-export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
+export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
   const location = useLocation()
-  const { pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } = location.state || {}
+  const { pdfUUID, pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } = location.state || {}
   const navigate = useNavigate()
 
-  const [currentPage, setCurrentPage] = useState<number | string>(Number(pdfCurrentPage) || 1)
+  // saved state
+  //const [pdfPageSaved, setPdfPageSaved] = useState<boolean>(true)
+
+  const [currentPage, setCurrentPage] = useState<number | string>(Number(pdfCurrentPage))
+  const [initialPage, setInitialPage] = useState<number>(pdfCurrentPage)
+  const [lastSavedPage, setLastSavedPage] = useState<number>(pdfCurrentPage)
 
   const [numPages] = useState<number>(pdfTotalNumPages || 0)
 
-  const [pdfDocument, setPdfDocument] = useState<pdfjs.PDFDocumentProxy | null>(null)
-  const [pageHeights, setPageHeights] = useState<number[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<List>(null)
 
@@ -42,6 +45,7 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
   // pageSize state
   const [pageSize, setPageSize] = useState<number>(590)
 
+  //
   useEffect(() => {
     const updateHeight = (): void => setListHeight(window.innerHeight - 90)
 
@@ -50,10 +54,46 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
     return (): void => window.removeEventListener('resize', updateHeight)
   }, [])
 
-  useEffect(() => {
-    // set currentPage state to pdfCurrentPage
-    setCurrentPage(pdfCurrentPage)
+  const currentPageRef = useRef(currentPage)
+  const lastSavedPageRef = useRef(lastSavedPage)
+  
 
+  useEffect(() => {
+    currentPageRef.current = currentPage
+    console.log("UPDATING currentPageRef.current", currentPageRef.current)
+  }, [currentPage])
+
+  useEffect(() => {
+    const savePageInterval = setInterval(async () => {
+      const currentPageVal = Number(currentPageRef.current)
+
+      if (Number(lastSavedPageRef.current) == currentPageVal) return; 
+
+      console.log(Number(lastSavedPageRef.current), Number(currentPageRef.current))
+
+
+      console.log(`Saving current page, ${currentPageVal}, of ${pdfTitle}`)
+      console.log(pdfUUID)
+      const pdfSavedBoolean = await window.electron.ipcRenderer.invoke(
+        'save-pdf-page',
+        pdfUUID,
+        currentPageVal
+      )
+      console.log(pdfSavedBoolean)
+      if (pdfSavedBoolean) {
+        console.log(`Saved page, ${currentPage}`)
+        setLastSavedPage(currentPageVal)
+        lastSavedPageRef.current = currentPageVal
+      } else {
+        console.log('Failed to save current page')
+      }
+    }, 5000)
+
+    return (): void => clearInterval(savePageInterval)
+  }, [])
+
+  // set title bar controls
+  useEffect(() => {
     // clear title bar controls
     setTitleBarControls(null)
 
@@ -70,55 +110,36 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
     )
   }, [])
 
-  useEffect(() => {
-    if (!pdfDocument) return
-
-    const loadPageHeights = async (): Promise<void> => {
-      const pageNumbers = Array.from({ length: pdfDocument.numPages }, (_, i) => i + 1)
-      const heights = await Promise.all(
-        pageNumbers.map(async (pageNumber) => {
-          const page = await pdfDocument.getPage(pageNumber)
-          const viewport = page.getViewport({ scale: 1 })
-          const scale = pageSize / viewport.width
-          return viewport.height * scale
-        })
-      )
-
-      setPageHeights(heights)
-      listRef.current?.resetAfterIndex(0)
-    }
-
-    loadPageHeights()
-  }, [pdfDocument, pageSize])
-
-  useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollToItem(Number(currentPage) - 1, 'start')
-    }
-  }, [currentPage, pageHeights])
-
   const handlePageChange = (value: string | number): void => {
     const parsedValue = typeof value === 'string' ? parseInt(value, 10) : value
 
     if (!isNaN(parsedValue)) {
       setCurrentPage(parsedValue)
+      setInitialPage(parsedValue)
     }
   }
 
   // handle page size changes
   const handlePageSizePlus = (): void => {
+    const savedCurrentPage = Number(currentPage)
+    console.log('SAVED CURRENT PAGE:', savedCurrentPage)
     if (varPageSizeIndex + 1 < varPageSizeArr.length) {
       const newVarPageSizeIndex = varPageSizeIndex + 1
       setVarPageSizeIndex(newVarPageSizeIndex)
       setVarPageSize(varPageSizeArr[newVarPageSizeIndex])
+      setInitialPage(savedCurrentPage)
     }
   }
 
   const handlePageSizeMinus = (): void => {
+    const savedCurrentPage = Number(currentPage)
+    console.log('SAVED CURRENT PAGE:', savedCurrentPage)
+
     if (varPageSizeIndex - 1 >= 0) {
       const newVarPageSizeIndex = varPageSizeIndex - 1
       setVarPageSizeIndex(newVarPageSizeIndex)
       setVarPageSize(varPageSizeArr[newVarPageSizeIndex])
+      setInitialPage(savedCurrentPage)
     }
   }
 
@@ -126,13 +147,6 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
     const pageSizeScaleFactor = varPageSize / 100
     setPageSize(baseViewportWidth * pageSizeScaleFactor)
   }, [varPageSize])
-
-  const SPACER_HEIGHT = 16
-
-  const getPageHeight = useCallback(
-    (index: number) => (pageHeights[index] || 800) + SPACER_HEIGHT,
-    [pageHeights]
-  )
 
   return (
     <>
@@ -147,7 +161,7 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
               <NumberInput
                 value={currentPage}
                 aria-label="Current page input"
-                onChange={handlePageChange}
+                onBlur={(e) => handlePageChange(e.currentTarget.value)}
                 className={classes['page-input']}
                 allowDecimal={false}
                 allowNegative={false}
@@ -215,28 +229,15 @@ export const Reader: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
 
         {/* PDF Viewer */}
         <div className={classes.reader} ref={containerRef}>
-          <div style={{ width: pageSize }}>
-            <Document file={pdfPath} onLoadSuccess={setPdfDocument} className={classes.document}>
-              {pdfDocument && pageHeights.length > 0 && (
-                <List
-                  ref={listRef}
-                  className={classes['page-list']}
-                  width="100%"
-                  height={listHeight}
-                  itemCount={numPages}
-                  itemSize={getPageHeight}
-                  estimatedItemSize={800}
-                  overscanCount={2}
-                >
-                  {({ index, style }) => (
-                    <div style={style}>
-                      <Page className="page-element" pageNumber={index + 1} width={pageSize} />
-                    </div>
-                  )}
-                </List>
-              )}
-            </Document>
-          </div>
+          <PDFViewer
+            pdfPath={pdfPath}
+            listRef={listRef}
+            listHeight={listHeight}
+            numPages={numPages}
+            initialPage={initialPage}
+            pageSize={pageSize}
+            setCurrentPage={setCurrentPage}
+          />
         </div>
       </Stack>
     </>
