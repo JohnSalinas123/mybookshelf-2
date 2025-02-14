@@ -1,9 +1,9 @@
 {
   "name": "mybookshelf-2",
   "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "description": "A pds library application for the pdf reader.",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "johnsalinas.com",
   "homepage": "https://electron-vite.org",
   "build": {
     "appId": "com.simpleapps.mybookshelf",

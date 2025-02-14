@@ -133,7 +133,7 @@ export const savePdfBook = async (): Promise<void> => {
 }
 
 export const savePdfPage = async (): Promise<void> => {
-  ipcMain.handle('save-pdf-page', async (event, uuid, currentPage) => {
+  ipcMain.handle('save-pdf-page', async (_event, uuid, currentPage) => {
     let pdfBookMetaData: PdfBookData[] = []
     try {
       try {
