@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { pdfjs } from 'react-pdf'
 
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -14,8 +14,7 @@ import {
   Skeleton,
   Progress,
   useComputedColorScheme,
-  TextInput,
-  Textarea,
+  Textarea
 } from '@mantine/core'
 import { useNavigate } from 'react-router'
 
@@ -154,26 +153,44 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   pdfCurrentPage,
   pdfThumbnailURL
 }) => {
-
-  //const [editingBook]
-  const [bookTitle, setBookTitle] = useState<string>(pdfTitle || "No title found")
+  const [editingTitle, setEditingTitle] = useState<boolean>(false)
+  const [bookTitle, setBookTitle] = useState<string>(pdfTitle || 'No title found')
 
   const navigate = useNavigate()
 
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
   //const theme = useMantineTheme();
-  const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
+  const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
 
   //console.log(pdfTitle, pdfFilePath, pdfTotalNumPages, pdfCurrentPage, pdfThumbnailURL)
 
   const percentageRead = (pdfCurrentPage / pdfTotalNumPages) * 100
   //console.log(percentageRead)
 
+  // handleOpenPdf opens file explorer for user to select a pdf to add
   const handleOpenPdf = (): void => {
+    // disabled if currently editting the library item's title
+    if (editingTitle) return
+
     // Open the PDF in the browser
     const pdfPath = `app://books/${pdfTitle}.pdf` // You can use the full path here
     navigate(`/reader`, { state: { pdfUUID, pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } })
   }
 
+  // TODO: handleSaveTitle saves new title of pdf book
+  // handleSaveTitle saved new title of pdf
+  //const handleSaveTitle = ():void => {
+  //
+  //}
+
+  useEffect(() => {
+    if (editingTitle && textareaRef.current) {
+      const textarea = textareaRef.current
+      textarea.focus()
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+    }
+  }, [editingTitle])
 
   return (
     <>
@@ -191,31 +208,41 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
         <div className={classes['thumbnail-box']}>
           <Image fit="contain" className={classes.thumbnail} radius="md" src={pdfThumbnailURL} />
         </div>
-        <div className={classes['title-box']}>
-          <Textarea
-            aria-label="Title textarea input"
-            value={bookTitle}
-            p={0} className={classes.title}
-            variant="unstyled"
-            maxRows={2}
-            onClick={(event) => event.stopPropagation()}
-            onChange={(event) => {
-              const maxLines = 2;
-              const text = event.currentTarget.value;
-              const lines = text.split("\n")
-
-              if (lines.length <= maxLines) {
-                setBookTitle(text);
-              } else {
-                setBookTitle(lines.slice(0,maxLines).join("\n"))
-              }
-            }}
-          />
-          {/* 
-          <Text p={0} className={classes.title}>
-            {bookTitle}
-          </Text>*/}
-
+        <div className={`${classes['title-box']} ${editingTitle ? classes['editing-border'] : ''}`}>
+          {editingTitle ? (
+            <Textarea
+              ref={textareaRef}
+              aria-label="Title textarea input"
+              value={bookTitle}
+              p={0}
+              className={classes['title-textarea']}
+              variant="unstyled"
+              maxRows={2}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) => setBookTitle(event.currentTarget.value)}
+              onBlur={() => {
+                setTimeout(() => setEditingTitle(false), 100)
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  setEditingTitle(false)
+                }
+              }}
+              autoFocus
+            />
+          ) : (
+            <Text
+              onClick={(event) => {
+                event.stopPropagation()
+                setEditingTitle(true)
+              }}
+              p={0}
+              className={classes.title}
+            >
+              {bookTitle}
+            </Text>
+          )}
         </div>
         <div className={classes['pageinfo-box']}>
           <Text>{`${pdfCurrentPage}/${pdfTotalNumPages}`}</Text>

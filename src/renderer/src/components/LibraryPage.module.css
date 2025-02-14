@@ -79,6 +79,10 @@
   margin: 5px 0;
 }
 
+.editing-border {
+  border-color: white !important;
+}
+
 .title {
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -90,11 +94,44 @@
   word-break: break-word !important;
   white-space: pre-wrap !important;
   text-align: center;
+  padding: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  height: 50px;
+}
+
+.title-textarea {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  flex-grow: 1;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  resize: none;
+  word-break: break-word !important;
+  white-space: pre-wrap !important;
+  text-align: center;
+  padding: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  height: 50px;
+  border-color: white;
+  border-radius: 5px;
+}
+
+.title-textarea div {
+  flex-grow: 1;
+}
+
+.title-textarea textarea {
+  padding: 0 !important;
+  height: 100% !important;
 }
 
 .title-box:hover {
   border-color: white;
-  border-radius: 5px;
 }
 
 .pageinfo-box {
