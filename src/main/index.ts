@@ -3,7 +3,7 @@ import { join } from 'path'
 import path from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { getPdfBooksData, savePdfBook, savePdfPage } from './ipcHandlers'
+import { getPdfBooksData, savePdfBook, savePdfPage, savePdfZoomAndIndex, updatePdfBookAsMostRecent } from './ipcHandlers'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -78,6 +78,12 @@ app.whenReady().then(async () => {
 
   // save pdf page ipcHandler
   await savePdfPage()
+
+  // update pdf to most recent
+  await updatePdfBookAsMostRecent()
+
+  // save page zoom level and zoom index
+  await savePdfZoomAndIndex()
 
   createWindow()
 

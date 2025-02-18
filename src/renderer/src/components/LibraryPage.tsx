@@ -38,6 +38,8 @@ interface PdfBookData {
   file_path: string
   num_pages: number
   cur_page: number
+  zoom_level: number
+  zoom_index: number
   thumbnail_path: string
 }
 
@@ -80,6 +82,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
     }
   }, [])
 
+  // fetchPdfBooks fetches pdf book data on intial load
   const fetchPdfBooks = async (): Promise<void> => {
     try {
       const pdfBooksData = await window.electron.ipcRenderer.invoke('fetch-pdf-books')
@@ -90,6 +93,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
     }
   }
 
+  // handleFileSelect selection of file, then save this pdf to library
   const handleFileSelect = (file: File | null): void => {
     if (!file || saveLoading) return
 
@@ -123,6 +127,8 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
                     pdfUUID={bookData.id}
                     pdfTotalNumPages={bookData.num_pages}
                     pdfCurrentPage={bookData.cur_page}
+                    pdfZoomLevel={bookData.zoom_level}
+                    pdfZoomIndex={bookData.zoom_index}
                     pdfTitle={bookData.title}
                     pdfThumbnailURL={bookData.thumbnail_path}
                   />
@@ -143,6 +149,8 @@ interface LibraryItemProps {
   pdfTitle: string | null
   pdfTotalNumPages: number
   pdfCurrentPage: number
+  pdfZoomLevel: number
+  pdfZoomIndex: number
   pdfThumbnailURL: string
 }
 
@@ -151,6 +159,8 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   pdfTitle,
   pdfTotalNumPages,
   pdfCurrentPage,
+  pdfZoomLevel,
+  pdfZoomIndex,
   pdfThumbnailURL
 }) => {
   const [editingTitle, setEditingTitle] = useState<boolean>(false)
@@ -175,7 +185,17 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
 
     // Open the PDF in the browser
     const pdfPath = `app://books/${pdfTitle}.pdf` // You can use the full path here
-    navigate(`/reader`, { state: { pdfUUID, pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } })
+    navigate(`/reader`, {
+      state: {
+        pdfUUID,
+        pdfTitle,
+        pdfPath,
+        pdfTotalNumPages,
+        pdfCurrentPage,
+        pdfZoomLevel,
+        pdfZoomIndex
+      }
+    })
   }
 
   // TODO: handleSaveTitle saves new title of pdf book

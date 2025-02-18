@@ -15,6 +15,8 @@ interface PdfBookData {
   file_path: string
   num_pages: number
   cur_page: number
+  zoom_level: number
+  zoom_index: number
   thumbnail_path: string
 }
 
@@ -80,16 +82,8 @@ export const savePdfBook = async (): Promise<void> => {
         console.error('Error generating thumbnail:', err)
       }
 
-      interface bookMetadata {
-        id: UUID
-        title: string
-        file_path: string
-        num_pages: number
-        cur_page: number
-        thumbnail_path: string
-      }
 
-      let metadata: bookMetadata[] = []
+      let metadata: PdfBookData[] = []
       try {
         const metadataJson = await fs.readFile(metadataFilePath, 'utf-8')
         metadata = JSON.parse(metadataJson)
@@ -110,6 +104,8 @@ export const savePdfBook = async (): Promise<void> => {
         file_path: destination,
         num_pages: numPages,
         cur_page: 0,
+        zoom_level: 100,
+        zoom_index: 7,
         thumbnail_path: thumbnailURL
       })
 
@@ -146,7 +142,7 @@ export const savePdfPage = async (): Promise<void> => {
 
       let bookSavedBool = false
 
-      // updata metadata.json with new currentPage for book with specific UUID arg
+      // update metadata.json with new currentPage for book with specific UUID arg
       for (const bookMetaData of pdfBookMetaData) {
         if (bookMetaData.id === uuid) {
           bookMetaData.cur_page = currentPage
@@ -168,3 +164,70 @@ export const savePdfPage = async (): Promise<void> => {
     }
   })
 }
+
+export const savePdfZoomAndIndex = async (): Promise<void> => {
+  ipcMain.on('save-page-zoom', async (_event, uuid, pageZoom, pageZoomIndex) => {
+    let pdfBookMetaData: PdfBookData[] = []
+    try {
+
+      try {
+        const data = await fs.readFile(metadataFilePath, 'utf-8')
+        pdfBookMetaData = JSON.parse(data)
+      } catch(error) {
+        if (error && typeof error === 'object' && 'code' in error && error.code !== "ENOENT")
+          throw error
+      }
+
+      // update metadata.json with new page zoom and zoom index for book with specific UUID arg
+      for (const bookMetaData of pdfBookMetaData) {
+        if(bookMetaData.id === uuid) {
+          bookMetaData.zoom_level = pageZoom
+          bookMetaData.zoom_index = pageZoomIndex
+          break
+        }
+      }
+
+      // saves changes to file
+      await fs.writeFile(metadataFilePath, JSON.stringify(pdfBookMetaData, null, 2), 'utf-8')
+      console.log("Saved zoom_level & zoom_index:", pageZoom, pageZoomIndex)
+
+
+    } catch (error) {
+      console.log("Error updating pdf's zoom level and zoom index")
+    }
+
+  })
+}
+
+export const updatePdfBookAsMostRecent = async (): Promise<void> => {
+  ipcMain.on('update-book-as-recent', async (_event, uuid) => {
+    let pdfBookMetaData: PdfBookData[] = []
+
+    try {
+      try {
+        const data = await fs.readFile(metadataFilePath, 'utf-8')
+        pdfBookMetaData = JSON.parse(data)
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
+          throw error
+      }
+
+      for (let i = 0; i < pdfBookMetaData.length; i++) {
+        if (pdfBookMetaData[i].id != uuid) continue
+
+        const pdfBookItemRemoved = pdfBookMetaData.splice(i, 1)[0]
+        if (pdfBookItemRemoved) {
+          pdfBookMetaData = [pdfBookItemRemoved, ...pdfBookMetaData]
+        }
+        break
+      }
+
+      // save the update book metadata back to the file
+      await fs.writeFile(metadataFilePath, JSON.stringify(pdfBookMetaData, null, 2), 'utf-8')
+    } catch (error) {
+      console.log('Error updating pdf to be most recently opened', error)
+    }
+  })
+}
+
+

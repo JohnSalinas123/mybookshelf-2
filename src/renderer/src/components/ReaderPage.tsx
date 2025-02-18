@@ -18,7 +18,7 @@ interface ReaderPageProps {
 
 export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
   const location = useLocation()
-  const { pdfUUID, pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage } = location.state || {}
+  const { pdfUUID, pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage, pdfZoomLevel, pdfZoomIndex } = location.state || {}
   const navigate = useNavigate()
 
   // saved state
@@ -38,14 +38,21 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   const varPageSizeArr = [
     25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500
   ]
-  const [varPageSize, setVarPageSize] = useState<number>(100)
-  const [varPageSizeIndex, setVarPageSizeIndex] = useState<number>(7)
+  const [varPageSize, setVarPageSize] = useState<number>(pdfZoomLevel | 100)
+  const [varPageSizeIndex, setVarPageSizeIndex] = useState<number>(pdfZoomIndex | 7)
 
   const baseViewportWidth = 590
   // pageSize state
   const [pageSize, setPageSize] = useState<number>(590)
 
-  //
+  useEffect(() => {
+    if (!pdfUUID) return
+
+    // send IPC invoke to update metadata.json, placing this book at the first position
+    window.electron.ipcRenderer.send('update-book-as-recent', pdfUUID)
+  }, [pdfUUID])
+
+  // updates height of pdf viewer list when height of app window is resized
   useEffect(() => {
     const updateHeight = (): void => setListHeight(window.innerHeight - 90)
 
@@ -56,21 +63,19 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
 
   const currentPageRef = useRef(currentPage)
   const lastSavedPageRef = useRef(lastSavedPage)
-  
 
   useEffect(() => {
     currentPageRef.current = currentPage
-    console.log("UPDATING currentPageRef.current", currentPageRef.current)
+    console.log('UPDATING currentPageRef.current', currentPageRef.current)
   }, [currentPage])
 
   useEffect(() => {
     const savePageInterval = setInterval(async () => {
       const currentPageVal = Number(currentPageRef.current)
 
-      if (Number(lastSavedPageRef.current) == currentPageVal) return; 
+      if (Number(lastSavedPageRef.current) == currentPageVal) return
 
       console.log(Number(lastSavedPageRef.current), Number(currentPageRef.current))
-
 
       console.log(`Saving current page, ${currentPageVal}, of ${pdfTitle}`)
       console.log(pdfUUID)
@@ -110,6 +115,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
     )
   }, [])
 
+  // handlePageChange handles page changes
   const handlePageChange = (value: string | number): void => {
     const parsedValue = typeof value === 'string' ? parseInt(value, 10) : value
 
@@ -119,27 +125,56 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
     }
   }
 
-  // handle page size changes
-  const handlePageSizePlus = (): void => {
-    const savedCurrentPage = Number(currentPage)
-    console.log('SAVED CURRENT PAGE:', savedCurrentPage)
-    if (varPageSizeIndex + 1 < varPageSizeArr.length) {
-      const newVarPageSizeIndex = varPageSizeIndex + 1
-      setVarPageSizeIndex(newVarPageSizeIndex)
-      setVarPageSize(varPageSizeArr[newVarPageSizeIndex])
-      setInitialPage(savedCurrentPage)
+  // handlePageSizeChange handles changes in page zoom when user inputs manually
+  const handlePageSizeChange = (value: string): void => {
+    // remove percentage
+    const numValue = Number(value.slice(0, -1))
+    const minPageSize = varPageSizeArr[0]
+    const maxPageSize = varPageSizeArr[varPageSizeArr.length - 1]
+
+    //console.log('NEW PAGE SIZE', numValue)
+
+    if (numValue < minPageSize) {
+      setVarPageSize(minPageSize)
+      setVarPageSizeIndex(0)
+      window.electron.ipcRenderer.send('save-page-zoom', pdfUUID, minPageSize, 0)
+    } else if (numValue > maxPageSize) {
+      setVarPageSize(maxPageSize)
+      setVarPageSizeIndex(varPageSizeArr.length - 1)
+      window.electron.ipcRenderer.send('save-page-zoom', pdfUUID, maxPageSize, varPageSizeArr.length - 1)
+    } else {
+      let tempPageIndex = 0
+      for (let i = 0; i < varPageSizeArr.length - 1; i++) {
+        if (numValue >= varPageSizeArr[i]) {
+          tempPageIndex = i
+        } else {
+          break
+        }
+      }
+      setVarPageSize(numValue)
+      setVarPageSizeIndex(tempPageIndex)
+      window.electron.ipcRenderer.send('save-page-zoom', pdfUUID, numValue, tempPageIndex)
     }
   }
 
-  const handlePageSizeMinus = (): void => {
-    const savedCurrentPage = Number(currentPage)
-    console.log('SAVED CURRENT PAGE:', savedCurrentPage)
+  // handlePageSizePlus handles increase in page zoom
+  const handlePageSizePlus = (): void => {
+    if (varPageSizeIndex + 1 < varPageSizeArr.length) {
+      console.log("PAGE ZOOM PLUS")
+      const newVarPageSizeIndex = varPageSizeIndex + 1
+      setVarPageSizeIndex(newVarPageSizeIndex)
+      setVarPageSize(varPageSizeArr[newVarPageSizeIndex])
+      window.electron.ipcRenderer.send('save-page-zoom', pdfUUID, varPageSizeArr[newVarPageSizeIndex], newVarPageSizeIndex)
+    }
+  }
 
+  // handlePageSizeMinus handles decrease in page zoom
+  const handlePageSizeMinus = (): void => {
     if (varPageSizeIndex - 1 >= 0) {
       const newVarPageSizeIndex = varPageSizeIndex - 1
       setVarPageSizeIndex(newVarPageSizeIndex)
       setVarPageSize(varPageSizeArr[newVarPageSizeIndex])
-      setInitialPage(savedCurrentPage)
+      window.electron.ipcRenderer.send('save-page-zoom', pdfUUID, varPageSizeArr[newVarPageSizeIndex], newVarPageSizeIndex)
     }
   }
 
@@ -200,15 +235,11 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
                 suffix="%"
                 hideControls
                 className={classes['size-percent']}
-                onChange={(value: number | string) => {
-                  const numValue = Number(value)
-                  if (
-                    numValue < varPageSizeArr[0] ||
-                    numValue > varPageSizeArr[varPageSizeArr.length - 1]
-                  )
-                    return
-
-                  setVarPageSize(Number(value))
+                onBlur={(e) => handlePageSizeChange(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePageSizeChange(e.currentTarget.value)
+                  }
                 }}
               />
               <ActionIcon
