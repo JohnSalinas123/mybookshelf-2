@@ -185,6 +185,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
 
     // Open the PDF in the browser
     const pdfPath = `app://books/${pdfTitle}.pdf` // You can use the full path here
+    console.log("LIBRARY PAGE ZOOM:", pdfZoomLevel, pdfZoomIndex)
     navigate(`/reader`, {
       state: {
         pdfUUID,

@@ -38,8 +38,11 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   const varPageSizeArr = [
     25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500
   ]
-  const [varPageSize, setVarPageSize] = useState<number>(pdfZoomLevel | 100)
-  const [varPageSizeIndex, setVarPageSizeIndex] = useState<number>(pdfZoomIndex | 7)
+
+  //console.log("ZOOM pdfZoomLevel", pdfZoomLevel)
+
+  const [varPageSize, setVarPageSize] = useState<number>(pdfZoomLevel || 100)
+  const [varPageSizeIndex, setVarPageSizeIndex] = useState<number>(pdfZoomIndex || 7)
 
   const baseViewportWidth = 590
   // pageSize state
@@ -178,9 +181,14 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
     }
   }
 
+  console.log("ZOOM pdfZoomLevel", pdfZoomLevel)
   useEffect(() => {
+    console.log("INITIAL PAGE ZOOM:", varPageSize)
     const pageSizeScaleFactor = varPageSize / 100
+    console.log("ZOOM baseViewportW", baseViewportWidth)
+    console.log("ZOOM CALC:", pageSizeScaleFactor, baseViewportWidth * pageSizeScaleFactor)
     setPageSize(baseViewportWidth * pageSizeScaleFactor)
+
   }, [varPageSize])
 
   return (

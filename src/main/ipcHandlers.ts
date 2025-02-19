@@ -119,6 +119,8 @@ export const savePdfBook = async (): Promise<void> => {
         file_path: destination,
         num_pages: numPages,
         cur_page: 0,
+        zoom_level:100,
+        zoom_index: 7,
         thumbnail_path: thumbnailURL
       })
     } catch (error) {
