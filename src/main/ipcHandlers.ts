@@ -5,7 +5,7 @@ import path from 'path'
 import pdf from 'pdf-parse'
 import { fromPath } from 'pdf2pic'
 
-const pdfDirPath = path.join(app.getPath('userData'), 'books')
+const bookCopyDirPath = path.join(app.getPath('userData'), 'books')
 const thumbnailDirPath = path.join(app.getPath('userData'), 'thumbnails')
 const dataDirPath = path.join(app.getPath('userData'), 'data')
 const bookDataFilePath = path.join(dataDirPath, 'books.json')
@@ -16,6 +16,7 @@ interface BookData {
   file_path: string
   num_pages: number
   cur_page: number
+  front_cover_page: number
   zoom_level: number
   zoom_index: number
   thumbnail_path: string
@@ -23,7 +24,7 @@ interface BookData {
 
 export const getPdfBooksData = async (): Promise<void> => {
   // make directories and files for book data if they don't exist
-  await fs.mkdir(pdfDirPath, { recursive: true }).catch(console.error)
+  await fs.mkdir(bookCopyDirPath, { recursive: true }).catch(console.error)
   await fs.mkdir(thumbnailDirPath, { recursive: true }).catch(console.error)
   await fs.mkdir(dataDirPath, { recursive: true }).catch(console.error)
 
@@ -52,11 +53,11 @@ export const getPdfBooksData = async (): Promise<void> => {
   })
 }
 
-export const savePdfBook = async (): Promise<void> => {
-  ipcMain.on('save-pdf', async (event, filePath) => {
+export const saveBook = async (): Promise<void> => {
+  ipcMain.handle('save-pdf', async (event, filePath) => {
     try {
       const fileName = path.basename(filePath)
-      const destination = path.join(pdfDirPath, fileName)
+      const destination = path.join(bookCopyDirPath, fileName)
 
       // copy pdf to storage
       await fs.copyFile(filePath, destination)
@@ -80,10 +81,12 @@ export const savePdfBook = async (): Promise<void> => {
         format: 'png',
         width: 300
       })
-      const pageToConvertAsImage = 1
+
+      // 
+      const thumbnailDefaultPage = 1
 
       try {
-        await converter(pageToConvertAsImage, { responseType: 'image' })
+        await converter(thumbnailDefaultPage, { responseType: 'image' })
       } catch (err) {
         console.error('Error generating thumbnail:', err)
       }
@@ -109,6 +112,7 @@ export const savePdfBook = async (): Promise<void> => {
         file_path: destination,
         num_pages: numPages,
         cur_page: 0,
+        front_cover_page: thumbnailDefaultPage,
         zoom_level: 100,
         zoom_index: 7,
         thumbnail_path: thumbnailURL
@@ -119,18 +123,23 @@ export const savePdfBook = async (): Promise<void> => {
       // save updated metadata
       await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2))
 
-      event.sender.send('pdf-added', {
-        title: fileName.replace('.pdf', ''),
-        file_path: destination,
-        num_pages: numPages,
-        cur_page: 0,
-        zoom_level: 100,
-        zoom_index: 7,
-        thumbnail_path: thumbnailURL
-      })
+      return {
+        success: true,
+        book_data: {
+          title: fileName.replace('.pdf', ''),
+          file_path: destination,
+          num_pages: numPages,
+          cur_page: 0,
+          front_cover_page: thumbnailDefaultPage,
+          zoom_level: 100,
+          zoom_index: 7,
+          thumbnail_path: thumbnailURL
+        }
+      }
+
     } catch (error) {
-      console.log('Error saving PDF:', error)
-      event.sender.send('pdf-error', 'Failed to save PDF.')
+      console.error('Error saving PDF:', error)
+      return { success: false, error: 'Failed to save PDF.'}
     }
   })
 }

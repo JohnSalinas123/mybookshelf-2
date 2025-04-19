@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, forwardRef } from 'react'
 import { pdfjs } from 'react-pdf'
 
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -14,12 +14,23 @@ import {
   Skeleton,
   Progress,
   useComputedColorScheme,
-  Textarea
+  Textarea,
+  Group,
+  ActionIcon,
+  Menu,
+  NumberInput,
+  Switch
 } from '@mantine/core'
 import { useNavigate } from 'react-router'
 
+import { RxDotsHorizontal } from 'react-icons/rx'
+import { HiOutlineTrash } from 'react-icons/hi'
+
 import classes from './LibraryPage.module.css'
 import { UUID } from 'crypto'
+import { BiSave } from 'react-icons/bi'
+import { BookData } from '@renderer/types/BookData'
+import { SaveBookDataResponse } from '@renderer/types/SaveBookDataResponse'
 
 if (process.env.NODE_ENV === 'development') {
   // In dev, the public folder is served at root:
@@ -32,23 +43,12 @@ if (process.env.NODE_ENV === 'development') {
   ).toString()
 }
 
-interface PdfBookData {
-  id: UUID
-  title: string | null
-  file_path: string
-  num_pages: number
-  cur_page: number
-  zoom_level: number
-  zoom_index: number
-  thumbnail_path: string
-}
-
 interface LibraryProps {
   setTitleBarControls: (controls: React.ReactNode) => void
 }
 
 export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
-  const [pdfBooksData, setPdfBooksData] = useState<PdfBookData[]>([])
+  const [pdfBooksData, setPdfBooksData] = useState<BookData[]>([])
   const [loading, setLoading] = useState(true)
   const [saveLoading, setSaveLoading] = useState(false)
 
@@ -58,7 +58,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
 
     // set add book button
     setTitleBarControls(
-      <FileButton onChange={(file) => handleFileSelect(file)} accept="application/pdf">
+      <FileButton onChange={(file) => handleSaveNewBook(file)} accept="application/pdf">
         {(props) => (
           <Button variant="outline" className="sub-button" {...props} radius="sm">
             Add book
@@ -70,16 +70,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
     // fetch pdf books data to load initial view with user's books
     fetchPdfBooks()
 
-    const handlePdfAdded = (_event, newBookData): void => {
-      setPdfBooksData((prevBookData) => [...prevBookData, newBookData])
-      setSaveLoading(false)
-    }
-
-    window.electron.ipcRenderer.on('pdf-added', handlePdfAdded)
-
-    return (): void => {
-      window.electron.ipcRenderer.removeAllListeners('pdf-added')
-    }
+    return (): void => {}
   }, [])
 
   // fetchPdfBooks fetches pdf book data on intial load
@@ -93,13 +84,31 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
     }
   }
 
-  // handleFileSelect selection of file, then save this pdf to library
-  const handleFileSelect = (file: File | null): void => {
+  // handleFileSelect selection of file, then save this book to library
+  const handleSaveNewBook = async (file: File | null): Promise<void> => {
     if (!file || saveLoading) return
 
-    // send fild path to main process
-    window.electron.ipcRenderer.send('save-pdf', file.path)
-    setSaveLoading(true)
+    // send file path to main process
+    try {
+      setSaveLoading(true)
+      const result: SaveBookDataResponse = await window.electron.ipcRenderer.invoke(
+        'save-pdf',
+        file.path
+      )
+
+      console.log(saveLoading)
+
+      if (result.success) {
+        setPdfBooksData((prevBookData) => [...prevBookData, result.book_data])
+      } else {
+        console.error(result.error)
+        // TODO: show ui error
+      }
+    } catch (err) {
+      console.error('Unexpected error saving book:', err)
+    } finally {
+      setSaveLoading(false)
+    }
   }
 
   return (
@@ -166,6 +175,8 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   const [editingTitle, setEditingTitle] = useState<boolean>(false)
   const [bookTitle, setBookTitle] = useState<string>(pdfTitle || 'No title found')
 
+  const [completedCheck, setCompletedCheck] = useState<boolean>(false)
+
   const navigate = useNavigate()
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -185,7 +196,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
 
     // Open the PDF in the browser
     const pdfPath = `app://books/${pdfTitle}.pdf` // You can use the full path here
-    console.log("LIBRARY PAGE ZOOM:", pdfZoomLevel, pdfZoomIndex)
+    console.log('LIBRARY PAGE ZOOM:', pdfZoomLevel, pdfZoomIndex)
     navigate(`/reader`, {
       state: {
         pdfUUID,
@@ -216,18 +227,79 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   return (
     <>
       <Paper
-        pt="md"
+        pt="3"
         pl="md"
         pr="md"
         pb="xs"
         shadow="sm"
         radius="md"
         withBorder
-        onClick={handleOpenPdf}
         className={`${classes.item} ${computedColorScheme === 'dark' ? classes.dark : classes.light}`}
       >
+        <Group pb={3} justify="flex-end" w={'100%'}>
+          <Menu shadow="md" width={200} position="top-start">
+            <Menu.Target>
+              <ActionIcon
+                size="xs"
+                variant="subtle"
+                aria-label="Settings"
+                color="rgba(255, 255, 255, 1)"
+              >
+                <RxDotsHorizontal />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Book settings</Menu.Label>
+              <Menu.Item className="normal-cursor" closeMenuOnClick={false}>
+                <Switch
+                  size="xs"
+                  checked={completedCheck}
+                  label="Completed"
+                  onChange={(event) => setCompletedCheck(event.currentTarget.checked)}
+                />
+              </Menu.Item>
+              <Menu.Label>Manual</Menu.Label>
+              <Menu.Item className="normal-cursor" p={4} component="div" closeMenuOnClick={false}>
+                <Group justify="space-between">
+                  <Text size="sm">Page</Text>
+                  <Group>
+                    <NumberInput size="xs" w={60} hideControls />
+                    <ActionIcon size="md" variant="outline" aria-label="Settings">
+                      <BiSave />
+                    </ActionIcon>
+                  </Group>
+                </Group>
+              </Menu.Item>
+              <Menu.Item className="normal-cursor" p={4} component="div" closeMenuOnClick={false}>
+                <Group justify="space-between">
+                  <Stack justify="center" gap={0} p={0}>
+                    <Text size="xs">Front</Text>
+                    <Text size="xs">Cover Page</Text>
+                  </Stack>
+                  <Group>
+                    <NumberInput size="xs" w={60} hideControls />
+                    <ActionIcon size="md" variant="outline" aria-label="Settings">
+                      <BiSave />
+                    </ActionIcon>
+                  </Group>
+                </Group>
+              </Menu.Item>
+              <Menu.Divider />
+              <Menu.Label>Danger zone</Menu.Label>
+              <Menu.Item color="red" leftSection={<HiOutlineTrash />}>
+                Delete book
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        </Group>
         <div className={classes['thumbnail-box']}>
-          <Image fit="contain" className={classes.thumbnail} radius="md" src={pdfThumbnailURL} />
+          <Image
+            fit="contain"
+            className={classes.thumbnail}
+            radius="md"
+            src={pdfThumbnailURL}
+            onClick={handleOpenPdf}
+          />
         </div>
         <div className={`${classes['title-box']} ${editingTitle ? classes['editing-border'] : ''}`}>
           {editingTitle ? (
