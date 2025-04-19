@@ -70,20 +70,7 @@ app.whenReady().then(async () => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  // retrive book metadata
-  await getPdfBooksData()
-
-  // save pdf ipcHandler
-  await savePdfBook()
-
-  // save pdf page ipcHandler
-  await savePdfPage()
-
-  // update pdf to most recent
-  await updatePdfBookAsMostRecent()
-
-  // save page zoom level and zoom index
-  await savePdfZoomAndIndex()
+  await setupIpcHandler()
 
   createWindow()
 
@@ -126,3 +113,21 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
+
+// setup ipc handlers
+const setupIpcHandler = async(): Promise<void> => {
+  // retrieve book metadata
+  await getPdfBooksData()
+
+  // save pdf ipcHandler
+  await savePdfBook()
+
+  // save pdf page ipcHandler
+  await savePdfPage()
+
+  // update pdf to most recent
+  await updatePdfBookAsMostRecent()
+
+  // save page zoom level and zoom index
+  await savePdfZoomAndIndex()
+}
