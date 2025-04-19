@@ -5,11 +5,12 @@ import path from 'path'
 import pdf from 'pdf-parse'
 import { fromPath } from 'pdf2pic'
 
-const pdfStoragePath = path.join(app.getPath('userData'), 'books')
-const thumbnailStoragePath = path.join(app.getPath('userData'), 'thumbnails')
-const metadataFilePath = path.join(app.getPath('userData'), 'metadata.json')
+const pdfDirPath = path.join(app.getPath('userData'), 'books')
+const thumbnailDirPath = path.join(app.getPath('userData'), 'thumbnails')
+const dataDirPath = path.join(app.getPath('userData'), 'data')
+const bookDataFilePath = path.join(dataDirPath, 'books.json')
 
-interface PdfBookData {
+interface BookData {
   id: UUID
   title: string | null
   file_path: string
@@ -21,24 +22,29 @@ interface PdfBookData {
 }
 
 export const getPdfBooksData = async (): Promise<void> => {
-  const pdfStoragePath = path.join(app.getPath('userData'), 'books')
+  // make directories and files for book data if they don't exist
+  await fs.mkdir(pdfDirPath, { recursive: true }).catch(console.error)
+  await fs.mkdir(thumbnailDirPath, { recursive: true }).catch(console.error)
+  await fs.mkdir(dataDirPath, { recursive: true }).catch(console.error)
 
-  // make directory for books, moves on if already exists
-  await fs.mkdir(pdfStoragePath, { recursive: true }).catch(console.error)
-  await fs.mkdir(thumbnailStoragePath, { recursive: true }).catch(console.error)
+  try {
+    await fs.access(bookDataFilePath)
+  } catch {
+    await fs.writeFile(bookDataFilePath, '[]', 'utf-8')
+  }
 
   ipcMain.handle('fetch-pdf-books', async () => {
     try {
-      let pdfBookMetaData = []
+      let booksDataJson = []
       try {
-        const data = await fs.readFile(metadataFilePath, 'utf-8')
-        pdfBookMetaData = JSON.parse(data)
+        const booksData = await fs.readFile(bookDataFilePath, 'utf-8')
+        booksDataJson = JSON.parse(booksData)
       } catch (error) {
         if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
           throw error
       }
 
-      return pdfBookMetaData
+      return booksDataJson
     } catch (error) {
       console.log('Error fetching PDF books:', error)
       throw new Error('Failed to fetch PDF books data')
@@ -50,7 +56,7 @@ export const savePdfBook = async (): Promise<void> => {
   ipcMain.on('save-pdf', async (event, filePath) => {
     try {
       const fileName = path.basename(filePath)
-      const destination = path.join(pdfStoragePath, fileName)
+      const destination = path.join(pdfDirPath, fileName)
 
       // copy pdf to storage
       await fs.copyFile(filePath, destination)
@@ -70,7 +76,7 @@ export const savePdfBook = async (): Promise<void> => {
       const converter = fromPath(destination, {
         density: 150,
         saveFilename: `${fileNameTrim}`,
-        savePath: thumbnailStoragePath,
+        savePath: thumbnailDirPath,
         format: 'png',
         width: 300
       })
@@ -82,11 +88,10 @@ export const savePdfBook = async (): Promise<void> => {
         console.error('Error generating thumbnail:', err)
       }
 
-
-      let metadata: PdfBookData[] = []
+      let booksDataJson: BookData[] = []
       try {
-        const metadataJson = await fs.readFile(metadataFilePath, 'utf-8')
-        metadata = JSON.parse(metadataJson)
+        const booksData = await fs.readFile(bookDataFilePath, 'utf-8')
+        booksDataJson = JSON.parse(booksData)
       } catch (err) {
         console.log('Metadata file not found, creating a new one')
       }
@@ -98,7 +103,7 @@ export const savePdfBook = async (): Promise<void> => {
       const pdfUUID = crypto.randomUUID()
 
       // add new book info to metadata
-      metadata.push({
+      booksDataJson.push({
         id: pdfUUID,
         title: fileName.replace('.pdf', ''),
         file_path: destination,
@@ -112,14 +117,14 @@ export const savePdfBook = async (): Promise<void> => {
       // TODO: test efficiency of loading entire metadata every time a book is added
       // -> find better way to appending to existing metadata
       // save updated metadata
-      await fs.writeFile(metadataFilePath, JSON.stringify(metadata, null, 2))
+      await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2))
 
       event.sender.send('pdf-added', {
         title: fileName.replace('.pdf', ''),
         file_path: destination,
         num_pages: numPages,
         cur_page: 0,
-        zoom_level:100,
+        zoom_level: 100,
         zoom_index: 7,
         thumbnail_path: thumbnailURL
       })
@@ -132,11 +137,12 @@ export const savePdfBook = async (): Promise<void> => {
 
 export const savePdfPage = async (): Promise<void> => {
   ipcMain.handle('save-pdf-page', async (_event, uuid, currentPage) => {
-    let pdfBookMetaData: PdfBookData[] = []
+    let booksDataJson: BookData[] = []
+
     try {
       try {
-        const data = await fs.readFile(metadataFilePath, 'utf-8')
-        pdfBookMetaData = JSON.parse(data)
+        const data = await fs.readFile(bookDataFilePath, 'utf-8')
+        booksDataJson = JSON.parse(data)
       } catch (error) {
         if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
           throw error
@@ -145,7 +151,7 @@ export const savePdfPage = async (): Promise<void> => {
       let bookSavedBool = false
 
       // update metadata.json with new currentPage for book with specific UUID arg
-      for (const bookMetaData of pdfBookMetaData) {
+      for (const bookMetaData of booksDataJson) {
         if (bookMetaData.id === uuid) {
           bookMetaData.cur_page = currentPage
           bookSavedBool = true
@@ -155,7 +161,7 @@ export const savePdfPage = async (): Promise<void> => {
 
       if (!bookSavedBool) return false
 
-      await fs.writeFile(metadataFilePath, JSON.stringify(pdfBookMetaData, null, 2), 'utf-8')
+      await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2), 'utf-8')
 
       console.log(`Saved page ${currentPage} for book ${uuid}`)
 
@@ -169,20 +175,19 @@ export const savePdfPage = async (): Promise<void> => {
 
 export const savePdfZoomAndIndex = async (): Promise<void> => {
   ipcMain.on('save-page-zoom', async (_event, uuid, pageZoom, pageZoomIndex) => {
-    let pdfBookMetaData: PdfBookData[] = []
+    let booksDataJson: BookData[] = []
     try {
-
       try {
-        const data = await fs.readFile(metadataFilePath, 'utf-8')
-        pdfBookMetaData = JSON.parse(data)
-      } catch(error) {
-        if (error && typeof error === 'object' && 'code' in error && error.code !== "ENOENT")
+        const data = await fs.readFile(bookDataFilePath, 'utf-8')
+        booksDataJson = JSON.parse(data)
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
           throw error
       }
 
       // update metadata.json with new page zoom and zoom index for book with specific UUID arg
-      for (const bookMetaData of pdfBookMetaData) {
-        if(bookMetaData.id === uuid) {
+      for (const bookMetaData of booksDataJson) {
+        if (bookMetaData.id === uuid) {
           bookMetaData.zoom_level = pageZoom
           bookMetaData.zoom_index = pageZoomIndex
           break
@@ -190,46 +195,41 @@ export const savePdfZoomAndIndex = async (): Promise<void> => {
       }
 
       // saves changes to file
-      await fs.writeFile(metadataFilePath, JSON.stringify(pdfBookMetaData, null, 2), 'utf-8')
-      console.log("Saved zoom_level & zoom_index:", pageZoom, pageZoomIndex)
-
-
+      await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2), 'utf-8')
+      console.log('Saved zoom_level & zoom_index:', pageZoom, pageZoomIndex)
     } catch (error) {
       console.log("Error updating pdf's zoom level and zoom index")
     }
-
   })
 }
 
 export const updatePdfBookAsMostRecent = async (): Promise<void> => {
   ipcMain.on('update-book-as-recent', async (_event, uuid) => {
-    let pdfBookMetaData: PdfBookData[] = []
+    let booksDataJson: BookData[] = []
 
     try {
       try {
-        const data = await fs.readFile(metadataFilePath, 'utf-8')
-        pdfBookMetaData = JSON.parse(data)
+        const data = await fs.readFile(bookDataFilePath, 'utf-8')
+        booksDataJson = JSON.parse(data)
       } catch (error) {
         if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
           throw error
       }
 
-      for (let i = 0; i < pdfBookMetaData.length; i++) {
-        if (pdfBookMetaData[i].id != uuid) continue
+      for (let i = 0; i < booksDataJson.length; i++) {
+        if (booksDataJson[i].id != uuid) continue
 
-        const pdfBookItemRemoved = pdfBookMetaData.splice(i, 1)[0]
+        const pdfBookItemRemoved = booksDataJson.splice(i, 1)[0]
         if (pdfBookItemRemoved) {
-          pdfBookMetaData = [pdfBookItemRemoved, ...pdfBookMetaData]
+          booksDataJson = [pdfBookItemRemoved, ...booksDataJson]
         }
         break
       }
 
       // save the update book metadata back to the file
-      await fs.writeFile(metadataFilePath, JSON.stringify(pdfBookMetaData, null, 2), 'utf-8')
+      await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2), 'utf-8')
     } catch (error) {
       console.log('Error updating pdf to be most recently opened', error)
     }
   })
 }
-
-
