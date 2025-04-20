@@ -3,8 +3,8 @@ import { join } from 'path'
 import path from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { getPdfBooksData, savePdfBook, savePdfPage, savePdfZoomAndIndex, updatePdfBookAsMostRecent } from './ipcHandlers'
 import { fileURLToPath } from 'url'
+import { setupBookIpcHandlers } from './ipcHandlers/bookIpcHandlers'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -70,7 +70,8 @@ app.whenReady().then(async () => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  await setupIpcHandler()
+  // setupBookIpcHandlers setup all book ipcHandlers
+  await setupBookIpcHandlers()
 
   createWindow()
 
@@ -113,21 +114,3 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
-
-// setup ipc handlers
-const setupIpcHandler = async(): Promise<void> => {
-  // retrieve book metadata
-  await getPdfBooksData()
-
-  // save pdf ipcHandler
-  await savePdfBook()
-
-  // save pdf page ipcHandler
-  await savePdfPage()
-
-  // update pdf to most recent
-  await updatePdfBookAsMostRecent()
-
-  // save page zoom level and zoom index
-  await savePdfZoomAndIndex()
-}

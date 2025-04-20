@@ -1,0 +1,1 @@
+// ipcHandlers for note operations

@@ -1,28 +1,29 @@
-import { UUID } from 'crypto'
+// ipcHandlers for book operations
+
 import { app, ipcMain } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
 import pdf from 'pdf-parse'
 import { fromPath } from 'pdf2pic'
 
+import { BookData } from '../../types/BookData'
+
 const bookCopyDirPath = path.join(app.getPath('userData'), 'books')
 const thumbnailDirPath = path.join(app.getPath('userData'), 'thumbnails')
 const dataDirPath = path.join(app.getPath('userData'), 'data')
 const bookDataFilePath = path.join(dataDirPath, 'books.json')
 
-interface BookData {
-  id: UUID
-  title: string | null
-  file_path: string
-  num_pages: number
-  cur_page: number
-  front_cover_page: number
-  zoom_level: number
-  zoom_index: number
-  thumbnail_path: string
+// setupBookIpcHandlers sets up ipc handlers for book operations
+export const setupBookIpcHandlers = async(): Promise<void> => {
+  await getBooksData()
+  await saveNewBook()
+  await saveBookCurrentPage()
+  await saveBookZoomAndIndex()
+  await updateBookAsMostRecent()
 }
 
-export const getPdfBooksData = async (): Promise<void> => {
+// getBooksData: retrives book data
+const getBooksData = async (): Promise<void> => {
   // make directories and files for book data if they don't exist
   await fs.mkdir(bookCopyDirPath, { recursive: true }).catch(console.error)
   await fs.mkdir(thumbnailDirPath, { recursive: true }).catch(console.error)
@@ -53,7 +54,8 @@ export const getPdfBooksData = async (): Promise<void> => {
   })
 }
 
-export const saveBook = async (): Promise<void> => {
+// saveNewBook: save new book to library
+export const saveNewBook = async (): Promise<void> => {
   ipcMain.handle('save-pdf', async (event, filePath) => {
     try {
       const fileName = path.basename(filePath)
@@ -82,7 +84,7 @@ export const saveBook = async (): Promise<void> => {
         width: 300
       })
 
-      // 
+      //
       const thumbnailDefaultPage = 1
 
       try {
@@ -136,15 +138,15 @@ export const saveBook = async (): Promise<void> => {
           thumbnail_path: thumbnailURL
         }
       }
-
     } catch (error) {
       console.error('Error saving PDF:', error)
-      return { success: false, error: 'Failed to save PDF.'}
+      return { success: false, error: 'Failed to save PDF.' }
     }
   })
 }
 
-export const savePdfPage = async (): Promise<void> => {
+// saveBookCurrentPage save book current page
+export const saveBookCurrentPage = async (): Promise<void> => {
   ipcMain.handle('save-pdf-page', async (_event, uuid, currentPage) => {
     let booksDataJson: BookData[] = []
 
@@ -182,7 +184,8 @@ export const savePdfPage = async (): Promise<void> => {
   })
 }
 
-export const savePdfZoomAndIndex = async (): Promise<void> => {
+// saveBookZoomAndIndex save book zoom and zoom index
+export const saveBookZoomAndIndex = async (): Promise<void> => {
   ipcMain.on('save-page-zoom', async (_event, uuid, pageZoom, pageZoomIndex) => {
     let booksDataJson: BookData[] = []
     try {
@@ -212,7 +215,8 @@ export const savePdfZoomAndIndex = async (): Promise<void> => {
   })
 }
 
-export const updatePdfBookAsMostRecent = async (): Promise<void> => {
+// updateBookAsMostRecent update book as most recently interacted with
+export const updateBookAsMostRecent = async (): Promise<void> => {
   ipcMain.on('update-book-as-recent', async (_event, uuid) => {
     let booksDataJson: BookData[] = []
 
