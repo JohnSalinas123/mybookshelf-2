@@ -56,7 +56,7 @@ const getBooksData = async (): Promise<void> => {
 
 // saveNewBook: save new book to library
 export const saveNewBook = async (): Promise<void> => {
-  ipcMain.handle('save-pdf', async (event, filePath) => {
+  ipcMain.handle('save-pdf', async (_event, filePath) => {
     try {
       const fileName = path.basename(filePath)
       const destination = path.join(bookCopyDirPath, fileName)

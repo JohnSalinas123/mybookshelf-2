@@ -1,5 +1,5 @@
 import { RichTextEditor, Link } from '@mantine/tiptap'
-import { BubbleMenu, Editor, FloatingMenu, useEditor } from '@tiptap/react'
+import { BubbleMenu, FloatingMenu, useEditor } from '@tiptap/react'
 import Highlight from '@tiptap/extension-highlight'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -19,7 +19,7 @@ const content = 'Potato'
 
 export const NotesEditor: React.FC = () => {
   const [notesSaved, setNotesSaved] = useState<boolean>(true)
-  const [lastNotesSaved, setLastNotesSaved] = useState<string>()
+  //const [lastNotesSaved, setLastNotesSaved] = useState<string>()
 
   const handleSaveNotes = (): void => {
     console.log(editor?.getHTML())
