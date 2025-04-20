@@ -1,0 +1,12 @@
+.content > div {
+    min-height: 400px !important;
+}
+
+.content {
+    max-height: 400px !important;
+    overflow-y: auto;
+}
+
+.content::-webkit-scrollbar {
+    width: 4px;
+}
