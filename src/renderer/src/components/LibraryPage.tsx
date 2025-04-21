@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, forwardRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { pdfjs } from 'react-pdf'
 
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -29,8 +29,8 @@ import { HiOutlineTrash } from 'react-icons/hi'
 import classes from './LibraryPage.module.css'
 import { UUID } from 'crypto'
 import { BiSave } from 'react-icons/bi'
-import { BookData } from '@renderer/types/BookData'
-import { SaveBookDataResponse } from '@renderer/types/SaveBookDataResponse'
+import { BookData } from '../../../types/BookData'
+import { SaveBookDataResponse } from 'src/types/SaveBookDataResponse'
 
 if (process.env.NODE_ENV === 'development') {
   // In dev, the public folder is served at root:
@@ -48,7 +48,7 @@ interface LibraryProps {
 }
 
 export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
-  const [pdfBooksData, setPdfBooksData] = useState<BookData[]>([])
+  const [booksDataArray, setBooksDataArray] = useState<BookData[]>([])
   const [loading, setLoading] = useState(true)
   const [saveLoading, setSaveLoading] = useState(false)
 
@@ -67,20 +67,20 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
       </FileButton>
     )
 
-    // fetch pdf books data to load initial view with user's books
-    fetchPdfBooks()
+    // fetch books data to load initial view with user's books
+    fetchBooksData()
 
     return (): void => {}
   }, [])
 
-  // fetchPdfBooks fetches pdf book data on intial load
-  const fetchPdfBooks = async (): Promise<void> => {
+  // fetchBooksData fetches all book data on intial load
+  const fetchBooksData = async (): Promise<void> => {
     try {
-      const pdfBooksData = await window.electron.ipcRenderer.invoke('fetch-pdf-books')
-      setPdfBooksData(pdfBooksData)
+      const booksData = await window.electron.ipcRenderer.invoke('fetch-books-data')
+      setBooksDataArray(booksData)
       setLoading(false)
     } catch (error) {
-      console.log('Error fetching PDF books:', error)
+      console.log('Error fetching all books data:', error)
     }
   }
 
@@ -92,14 +92,14 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
     try {
       setSaveLoading(true)
       const result: SaveBookDataResponse = await window.electron.ipcRenderer.invoke(
-        'save-pdf',
+        'save-new-book',
         file.path
       )
 
       console.log(saveLoading)
 
       if (result.success) {
-        setPdfBooksData((prevBookData) => [...prevBookData, result.book_data])
+        setBooksDataArray((prevBookData) => [...prevBookData, result.book_data])
       } else {
         console.error(result.error)
         // TODO: show ui error
@@ -129,17 +129,18 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
         <>
           <Stack gap={0}>
             <div className={classes['library-grid']}>
-              {pdfBooksData &&
-                pdfBooksData.map((bookData, index) => (
+              {booksDataArray &&
+                booksDataArray.map((bookData, index) => (
                   <LibraryItem
                     key={index}
-                    pdfUUID={bookData.id}
-                    pdfTotalNumPages={bookData.num_pages}
-                    pdfCurrentPage={bookData.cur_page}
-                    pdfZoomLevel={bookData.zoom_level}
-                    pdfZoomIndex={bookData.zoom_index}
-                    pdfTitle={bookData.title}
-                    pdfThumbnailURL={bookData.thumbnail_path}
+                    bookUUID={bookData.id}
+                    bookTotalNumPages={bookData.num_pages}
+                    bookCurrentPage={bookData.cur_page}
+                    bookFrontCoverPage={bookData.front_cover_page}
+                    bookZoomLevel={bookData.zoom_level}
+                    bookZoomIndex={bookData.zoom_index}
+                    bookTitle={bookData.title}
+                    bookThumbnailURL={bookData.thumbnail_path}
                   />
                 ))}
               <Skeleton key={-1} visible={saveLoading}>
@@ -154,64 +155,62 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
 }
 
 interface LibraryItemProps {
-  pdfUUID: UUID
-  pdfTitle: string | null
-  pdfTotalNumPages: number
-  pdfCurrentPage: number
-  pdfZoomLevel: number
-  pdfZoomIndex: number
-  pdfThumbnailURL: string
+  bookUUID: UUID
+  bookTitle: string | null
+  bookTotalNumPages: number
+  bookCurrentPage: number
+  bookFrontCoverPage: number
+  bookZoomLevel: number
+  bookZoomIndex: number
+  bookThumbnailURL: string
 }
 
 export const LibraryItem: React.FC<LibraryItemProps> = ({
-  pdfUUID,
-  pdfTitle,
-  pdfTotalNumPages,
-  pdfCurrentPage,
-  pdfZoomLevel,
-  pdfZoomIndex,
-  pdfThumbnailURL
+  bookUUID,
+  bookTitle,
+  bookTotalNumPages,
+  bookCurrentPage,
+  bookFrontCoverPage,
+  bookZoomLevel,
+  bookZoomIndex,
+  bookThumbnailURL
 }) => {
   const [editingTitle, setEditingTitle] = useState<boolean>(false)
-  const [bookTitle, setBookTitle] = useState<string>(pdfTitle || 'No title found')
-
+  const [bookTitleText, setBookTitleText] = useState<string>(bookTitle || 'No title found')
   const [completedCheck, setCompletedCheck] = useState<boolean>(false)
 
   const navigate = useNavigate()
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-  //const theme = useMantineTheme();
   const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
 
-  //console.log(pdfTitle, pdfFilePath, pdfTotalNumPages, pdfCurrentPage, pdfThumbnailURL)
+  const percentageRead = (bookCurrentPage / bookTotalNumPages) * 100
 
-  const percentageRead = (pdfCurrentPage / pdfTotalNumPages) * 100
-  //console.log(percentageRead)
-
-  // handleOpenPdf opens file explorer for user to select a pdf to add
-  const handleOpenPdf = (): void => {
+  // handleOpenBook navigates to reader and passes book data
+  const handleOpenBook = (): void => {
     // disabled if currently editting the library item's title
     if (editingTitle) return
 
-    // Open the PDF in the browser
-    const pdfPath = `app://books/${pdfTitle}.pdf` // You can use the full path here
-    console.log('LIBRARY PAGE ZOOM:', pdfZoomLevel, pdfZoomIndex)
+    // TODO: change to be more general when added file_type to book data
+    // make more general to work with other types of e-book formats
+    const bookFilePath = `app://books/${bookTitle}.pdf`
+    console.log('LIBRARY PAGE ZOOM:', bookZoomLevel, bookZoomIndex)
     navigate(`/reader`, {
       state: {
-        pdfUUID,
-        pdfTitle,
-        pdfPath,
-        pdfTotalNumPages,
-        pdfCurrentPage,
-        pdfZoomLevel,
-        pdfZoomIndex
+        bookUUID,
+        bookTitle,
+        bookFilePath,
+        bookTotalNumPages,
+        bookCurrentPage,
+        bookZoomLevel,
+        bookZoomIndex
       }
     })
   }
 
-  // TODO: handleSaveTitle saves new title of pdf book
-  // handleSaveTitle saved new title of pdf
+  // TODO:
+  // handleSaveTitle saved new title of book
   //const handleSaveTitle = ():void => {
   //
   //}
@@ -263,7 +262,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
                 <Group justify="space-between">
                   <Text size="sm">Page</Text>
                   <Group>
-                    <NumberInput size="xs" w={60} hideControls />
+                    <NumberInput defaultValue={bookCurrentPage} size="xs" w={60} hideControls />
                     <ActionIcon size="md" variant="outline" aria-label="Settings">
                       <BiSave />
                     </ActionIcon>
@@ -277,7 +276,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
                     <Text size="xs">Cover Page</Text>
                   </Stack>
                   <Group>
-                    <NumberInput size="xs" w={60} hideControls />
+                    <NumberInput defaultValue={bookFrontCoverPage} size="xs" w={60} hideControls />
                     <ActionIcon size="md" variant="outline" aria-label="Settings">
                       <BiSave />
                     </ActionIcon>
@@ -297,8 +296,8 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
             fit="contain"
             className={classes.thumbnail}
             radius="md"
-            src={pdfThumbnailURL}
-            onClick={handleOpenPdf}
+            src={bookThumbnailURL}
+            onClick={handleOpenBook}
           />
         </div>
         <div className={`${classes['title-box']} ${editingTitle ? classes['editing-border'] : ''}`}>
@@ -306,13 +305,13 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
             <Textarea
               ref={textareaRef}
               aria-label="Title textarea input"
-              value={bookTitle}
+              value={bookTitleText}
               p={0}
               className={classes['title-textarea']}
               variant="unstyled"
               maxRows={2}
               onClick={(event) => event.stopPropagation()}
-              onChange={(event) => setBookTitle(event.currentTarget.value)}
+              onChange={(event) => setBookTitleText(event.currentTarget.value)}
               onBlur={() => {
                 setTimeout(() => setEditingTitle(false), 100)
               }}
@@ -338,7 +337,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
           )}
         </div>
         <div className={classes['pageinfo-box']}>
-          <Text>{`${pdfCurrentPage}/${pdfTotalNumPages}`}</Text>
+          <Text>{`${bookCurrentPage}/${bookTotalNumPages}`}</Text>
           <Progress value={percentageRead} />
         </div>
       </Paper>

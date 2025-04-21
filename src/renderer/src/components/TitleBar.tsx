@@ -51,10 +51,11 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         <div className={classes['main-controls-box']}>
           <Group gap={7}>
             <Popover
-              width={500}
+              width={510}
+              
               opened={notesPopOpened}
               onChange={setNotesPopOpened}
-              offset={{ mainAxis: 30, crossAxis: -100 }}
+              offset={{ mainAxis: 30, crossAxis: -145 }}
               withArrow
               arrowSize={12}
             >

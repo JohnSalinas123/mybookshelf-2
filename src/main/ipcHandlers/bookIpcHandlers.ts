@@ -35,7 +35,7 @@ const getBooksData = async (): Promise<void> => {
     await fs.writeFile(bookDataFilePath, '[]', 'utf-8')
   }
 
-  ipcMain.handle('fetch-pdf-books', async () => {
+  ipcMain.handle('fetch-books-data', async () => {
     try {
       let booksDataJson = []
       try {
@@ -48,25 +48,26 @@ const getBooksData = async (): Promise<void> => {
 
       return booksDataJson
     } catch (error) {
-      console.log('Error fetching PDF books:', error)
-      throw new Error('Failed to fetch PDF books data')
+      console.log('Error fetching books data:', error)
+      throw new Error('Failed to fetch books data')
     }
   })
 }
 
 // saveNewBook: save new book to library
 export const saveNewBook = async (): Promise<void> => {
-  ipcMain.handle('save-pdf', async (_event, filePath) => {
+  ipcMain.handle('save-new-book', async (_event, filePath) => {
     try {
       const fileName = path.basename(filePath)
       const destination = path.join(bookCopyDirPath, fileName)
 
-      // copy pdf to storage
+      // copy book to storage
       await fs.copyFile(filePath, destination)
 
-      // read pdf as a buffer
+      // read book as a buffer
       const pdfBuffer = await fs.readFile(destination)
 
+      // TODO: generalize to work for other e-book file types, such as epub
       // extract number of pages
       const pdfInfo = await pdf(pdfBuffer)
       const numPages = pdfInfo.numpages
@@ -139,15 +140,15 @@ export const saveNewBook = async (): Promise<void> => {
         }
       }
     } catch (error) {
-      console.error('Error saving PDF:', error)
-      return { success: false, error: 'Failed to save PDF.' }
+      console.error('Error saving new book:', error)
+      return { success: false, error: 'Failed to save new book.' }
     }
   })
 }
 
 // saveBookCurrentPage save book current page
 export const saveBookCurrentPage = async (): Promise<void> => {
-  ipcMain.handle('save-pdf-page', async (_event, uuid, currentPage) => {
+  ipcMain.handle('save-book-page', async (_event, uuid, currentPage) => {
     let booksDataJson: BookData[] = []
 
     try {
@@ -178,7 +179,7 @@ export const saveBookCurrentPage = async (): Promise<void> => {
 
       return true
     } catch (error) {
-      console.log('Error saving pdf page', error)
+      console.log('Error saving book current page', error)
       return false
     }
   })
@@ -210,7 +211,7 @@ export const saveBookZoomAndIndex = async (): Promise<void> => {
       await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2), 'utf-8')
       console.log('Saved zoom_level & zoom_index:', pageZoom, pageZoomIndex)
     } catch (error) {
-      console.log("Error updating pdf's zoom level and zoom index")
+      console.log("Error updating book's zoom level and zoom index")
     }
   })
 }
@@ -232,9 +233,9 @@ export const updateBookAsMostRecent = async (): Promise<void> => {
       for (let i = 0; i < booksDataJson.length; i++) {
         if (booksDataJson[i].id != uuid) continue
 
-        const pdfBookItemRemoved = booksDataJson.splice(i, 1)[0]
-        if (pdfBookItemRemoved) {
-          booksDataJson = [pdfBookItemRemoved, ...booksDataJson]
+        const bookItemRemoved = booksDataJson.splice(i, 1)[0]
+        if (bookItemRemoved) {
+          booksDataJson = [bookItemRemoved, ...booksDataJson]
         }
         break
       }
@@ -242,7 +243,7 @@ export const updateBookAsMostRecent = async (): Promise<void> => {
       // save the update book metadata back to the file
       await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2), 'utf-8')
     } catch (error) {
-      console.log('Error updating pdf to be most recently opened', error)
+      console.log('Error updating book to be most recently opened', error)
     }
   })
 }

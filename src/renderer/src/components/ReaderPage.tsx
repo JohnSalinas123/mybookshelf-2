@@ -18,17 +18,25 @@ interface ReaderPageProps {
 
 export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
   const location = useLocation()
-  const { pdfUUID, pdfTitle, pdfPath, pdfTotalNumPages, pdfCurrentPage, pdfZoomLevel, pdfZoomIndex } = location.state || {}
+  const {
+    bookUUID,
+    bookTitle,
+    bookFilePath,
+    bookTotalNumPages,
+    bookCurrentPage,
+    bookZoomLevel,
+    bookZoomIndex
+  } = location.state || {}
   const navigate = useNavigate()
 
   // saved state
   //const [pdfPageSaved, setPdfPageSaved] = useState<boolean>(true)
 
-  const [currentPage, setCurrentPage] = useState<number | string>(Number(pdfCurrentPage))
-  const [initialPage, setInitialPage] = useState<number>(pdfCurrentPage)
-  const [lastSavedPage, setLastSavedPage] = useState<number>(pdfCurrentPage)
+  const [currentPage, setCurrentPage] = useState<number | string>(Number(bookCurrentPage))
+  const [initialPage, setInitialPage] = useState<number>(bookCurrentPage)
+  const [lastSavedPage, setLastSavedPage] = useState<number>(bookCurrentPage)
 
-  const [numPages] = useState<number>(pdfTotalNumPages || 0)
+  const [numPages] = useState<number>(bookTotalNumPages || 0)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<List>(null)
@@ -39,21 +47,21 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
     25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500
   ]
 
-  //console.log("ZOOM pdfZoomLevel", pdfZoomLevel)
+  //console.log("ZOOM bookZoomLevel", bookZoomLevel)
 
-  const [varPageSize, setVarPageSize] = useState<number>(pdfZoomLevel || 100)
-  const [varPageSizeIndex, setVarPageSizeIndex] = useState<number>(pdfZoomIndex || 7)
+  const [varPageSize, setVarPageSize] = useState<number>(bookZoomLevel || 100)
+  const [varPageSizeIndex, setVarPageSizeIndex] = useState<number>(bookZoomIndex || 7)
 
   const baseViewportWidth = 590
   // pageSize state
   const [pageSize, setPageSize] = useState<number>(590)
 
   useEffect(() => {
-    if (!pdfUUID) return
+    if (!bookUUID) return
 
     // send IPC invoke to update metadata.json, placing this book at the first position
-    window.electron.ipcRenderer.send('update-book-as-recent', pdfUUID)
-  }, [pdfUUID])
+    window.electron.ipcRenderer.send('update-book-as-recent', bookUUID)
+  }, [bookUUID])
 
   // updates height of pdf viewer list when height of app window is resized
   useEffect(() => {
@@ -80,11 +88,11 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
 
       console.log(Number(lastSavedPageRef.current), Number(currentPageRef.current))
 
-      console.log(`Saving current page, ${currentPageVal}, of ${pdfTitle}`)
-      console.log(pdfUUID)
+      console.log(`Saving current page, ${currentPageVal}, of ${bookTitle}`)
+      console.log(bookUUID)
       const pdfSavedBoolean = await window.electron.ipcRenderer.invoke(
         'save-pdf-page',
-        pdfUUID,
+        bookUUID,
         currentPageVal
       )
       console.log(pdfSavedBoolean)
@@ -140,11 +148,16 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
     if (numValue < minPageSize) {
       setVarPageSize(minPageSize)
       setVarPageSizeIndex(0)
-      window.electron.ipcRenderer.send('save-page-zoom', pdfUUID, minPageSize, 0)
+      window.electron.ipcRenderer.send('save-page-zoom', bookUUID, minPageSize, 0)
     } else if (numValue > maxPageSize) {
       setVarPageSize(maxPageSize)
       setVarPageSizeIndex(varPageSizeArr.length - 1)
-      window.electron.ipcRenderer.send('save-page-zoom', pdfUUID, maxPageSize, varPageSizeArr.length - 1)
+      window.electron.ipcRenderer.send(
+        'save-page-zoom',
+        bookUUID,
+        maxPageSize,
+        varPageSizeArr.length - 1
+      )
     } else {
       let tempPageIndex = 0
       for (let i = 0; i < varPageSizeArr.length - 1; i++) {
@@ -156,18 +169,23 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
       }
       setVarPageSize(numValue)
       setVarPageSizeIndex(tempPageIndex)
-      window.electron.ipcRenderer.send('save-page-zoom', pdfUUID, numValue, tempPageIndex)
+      window.electron.ipcRenderer.send('save-page-zoom', bookUUID, numValue, tempPageIndex)
     }
   }
 
   // handlePageSizePlus handles increase in page zoom
   const handlePageSizePlus = (): void => {
     if (varPageSizeIndex + 1 < varPageSizeArr.length) {
-      console.log("PAGE ZOOM PLUS")
+      console.log('PAGE ZOOM PLUS')
       const newVarPageSizeIndex = varPageSizeIndex + 1
       setVarPageSizeIndex(newVarPageSizeIndex)
       setVarPageSize(varPageSizeArr[newVarPageSizeIndex])
-      window.electron.ipcRenderer.send('save-page-zoom', pdfUUID, varPageSizeArr[newVarPageSizeIndex], newVarPageSizeIndex)
+      window.electron.ipcRenderer.send(
+        'save-page-zoom',
+        bookUUID,
+        varPageSizeArr[newVarPageSizeIndex],
+        newVarPageSizeIndex
+      )
     }
   }
 
@@ -177,18 +195,22 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
       const newVarPageSizeIndex = varPageSizeIndex - 1
       setVarPageSizeIndex(newVarPageSizeIndex)
       setVarPageSize(varPageSizeArr[newVarPageSizeIndex])
-      window.electron.ipcRenderer.send('save-page-zoom', pdfUUID, varPageSizeArr[newVarPageSizeIndex], newVarPageSizeIndex)
+      window.electron.ipcRenderer.send(
+        'save-page-zoom',
+        bookUUID,
+        varPageSizeArr[newVarPageSizeIndex],
+        newVarPageSizeIndex
+      )
     }
   }
 
-  console.log("ZOOM pdfZoomLevel", pdfZoomLevel)
+  console.log('ZOOM bookZoomLevel', bookZoomLevel)
   useEffect(() => {
-    console.log("INITIAL PAGE ZOOM:", varPageSize)
+    console.log('INITIAL PAGE ZOOM:', varPageSize)
     const pageSizeScaleFactor = varPageSize / 100
-    console.log("ZOOM baseViewportW", baseViewportWidth)
-    console.log("ZOOM CALC:", pageSizeScaleFactor, baseViewportWidth * pageSizeScaleFactor)
+    console.log('ZOOM baseViewportW', baseViewportWidth)
+    console.log('ZOOM CALC:', pageSizeScaleFactor, baseViewportWidth * pageSizeScaleFactor)
     setPageSize(baseViewportWidth * pageSizeScaleFactor)
-
   }, [varPageSize])
 
   return (
@@ -197,7 +219,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
         <div className={classes['pdf-controls']}>
           <div className={classes.left}>
             {/*<RxHamburgerMenu /> */}
-            <Text>{`${pdfTitle}`}</Text>
+            <Text>{`${bookTitle}`}</Text>
           </div>
           <div className={classes.center}>
             <div className={classes['control-group']}>
@@ -209,11 +231,11 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
                 allowDecimal={false}
                 allowNegative={false}
                 min={0}
-                max={pdfTotalNumPages}
+                max={bookTotalNumPages}
                 hideControls
-                defaultValue={pdfCurrentPage}
+                defaultValue={bookCurrentPage}
               />
-              <Text className={classes['page-total']}>{`/ ${pdfTotalNumPages}`}</Text>
+              <Text className={classes['page-total']}>{`/ ${bookTotalNumPages}`}</Text>
             </div>
 
             <Divider
@@ -269,7 +291,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
         {/* PDF Viewer */}
         <div className={classes.reader} ref={containerRef}>
           <PDFViewer
-            pdfPath={pdfPath}
+            bookFilePath={bookFilePath}
             listRef={listRef}
             listHeight={listHeight}
             numPages={numPages}
