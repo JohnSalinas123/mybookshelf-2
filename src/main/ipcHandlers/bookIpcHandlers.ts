@@ -12,14 +12,16 @@ const bookCopyDirPath = path.join(app.getPath('userData'), 'books')
 const thumbnailDirPath = path.join(app.getPath('userData'), 'thumbnails')
 const dataDirPath = path.join(app.getPath('userData'), 'data')
 const bookDataFilePath = path.join(dataDirPath, 'books.json')
+const deletedBookDataFilePath = path.join(dataDirPath, 'deleted-books.json')
 
 // setupBookIpcHandlers sets up ipc handlers for book operations
-export const setupBookIpcHandlers = async(): Promise<void> => {
+export const setupBookIpcHandlers = async (): Promise<void> => {
   await getBooksData()
   await saveNewBook()
   await saveBookCurrentPage()
   await saveBookZoomAndIndex()
   await updateBookAsMostRecent()
+  await deleteBook()
 }
 
 // getBooksData: retrives book data
@@ -37,7 +39,7 @@ const getBooksData = async (): Promise<void> => {
 
   ipcMain.handle('fetch-books-data', async () => {
     try {
-      let booksDataJson = []
+      let booksDataJson: BookData[] = []
       try {
         const booksData = await fs.readFile(bookDataFilePath, 'utf-8')
         booksDataJson = JSON.parse(booksData)
@@ -55,7 +57,7 @@ const getBooksData = async (): Promise<void> => {
 }
 
 // saveNewBook: save new book to library
-export const saveNewBook = async (): Promise<void> => {
+const saveNewBook = async (): Promise<void> => {
   ipcMain.handle('save-new-book', async (_event, filePath) => {
     try {
       const fileName = path.basename(filePath)
@@ -141,20 +143,20 @@ export const saveNewBook = async (): Promise<void> => {
       }
     } catch (error) {
       console.error('Error saving new book:', error)
-      return { success: false, error: 'Failed to save new book.' }
+      return { success: false, error: `Failed to save new book: ${error}` }
     }
   })
 }
 
 // saveBookCurrentPage save book current page
-export const saveBookCurrentPage = async (): Promise<void> => {
+const saveBookCurrentPage = async (): Promise<void> => {
   ipcMain.handle('save-book-page', async (_event, uuid, currentPage) => {
     let booksDataJson: BookData[] = []
 
     try {
       try {
-        const data = await fs.readFile(bookDataFilePath, 'utf-8')
-        booksDataJson = JSON.parse(data)
+        const booksData = await fs.readFile(bookDataFilePath, 'utf-8')
+        booksDataJson = JSON.parse(booksData)
       } catch (error) {
         if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
           throw error
@@ -163,9 +165,9 @@ export const saveBookCurrentPage = async (): Promise<void> => {
       let bookSavedBool = false
 
       // update metadata.json with new currentPage for book with specific UUID arg
-      for (const bookMetaData of booksDataJson) {
-        if (bookMetaData.id === uuid) {
-          bookMetaData.cur_page = currentPage
+      for (const bookDataItem of booksDataJson) {
+        if (bookDataItem.id === uuid) {
+          bookDataItem.cur_page = currentPage
           bookSavedBool = true
           break
         }
@@ -186,7 +188,7 @@ export const saveBookCurrentPage = async (): Promise<void> => {
 }
 
 // saveBookZoomAndIndex save book zoom and zoom index
-export const saveBookZoomAndIndex = async (): Promise<void> => {
+const saveBookZoomAndIndex = async (): Promise<void> => {
   ipcMain.on('save-page-zoom', async (_event, uuid, pageZoom, pageZoomIndex) => {
     let booksDataJson: BookData[] = []
     try {
@@ -217,7 +219,7 @@ export const saveBookZoomAndIndex = async (): Promise<void> => {
 }
 
 // updateBookAsMostRecent update book as most recently interacted with
-export const updateBookAsMostRecent = async (): Promise<void> => {
+const updateBookAsMostRecent = async (): Promise<void> => {
   ipcMain.on('update-book-as-recent', async (_event, uuid) => {
     let booksDataJson: BookData[] = []
 
@@ -244,6 +246,55 @@ export const updateBookAsMostRecent = async (): Promise<void> => {
       await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2), 'utf-8')
     } catch (error) {
       console.log('Error updating book to be most recently opened', error)
+    }
+  })
+}
+
+// deleteBook delete book from library
+// keep archive of deleted data just in case
+const deleteBook = async (): Promise<void> => {
+  // check for existence of deleted-book.json, if doesn't exist create file
+  try {
+    await fs.access(deletedBookDataFilePath)
+  } catch {
+    await fs.writeFile(deletedBookDataFilePath, '[]', 'utf-8')
+  }
+
+  ipcMain.handle('delete-book', async (_event, uuid) => {
+    // read books data json, find book with matching uuid
+    let booksDataJson: BookData[] = []
+
+    try {
+      try {
+        const booksData = await fs.readFile(bookDataFilePath, 'utf-8')
+        booksDataJson = JSON.parse(booksData)
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
+          throw error
+      }
+
+      // check if book attempting to delete exists
+      const bookToDelete = booksDataJson.find((book) => book.id === uuid)
+
+      if (!bookToDelete) {
+        return { success: false, error: `Book with id ${uuid} not found` }
+      }
+
+      const updatedBooksAfterDeletion = booksDataJson.filter((book) => book.id !== uuid)
+
+      await fs.writeFile(
+        bookDataFilePath,
+        JSON.stringify(updatedBooksAfterDeletion, null, 2),
+        'utf-8'
+      )
+
+      console.log(`Successfully deleleted book with uuid ${uuid}`)
+      return {
+        success: true
+      }
+    } catch (error) {
+      console.log('Error fetching books data:', error)
+      return { success: false, error: `Failed to save new book ${error}` }
     }
   })
 }

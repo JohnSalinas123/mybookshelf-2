@@ -31,6 +31,7 @@ import { UUID } from 'crypto'
 import { BiSave } from 'react-icons/bi'
 import { BookData } from '../../../types/BookData'
 import { SaveBookDataResponse } from 'src/types/SaveBookDataResponse'
+import { GeneralResponse } from 'src/types/GeneralResponse'
 
 if (process.env.NODE_ENV === 'development') {
   // In dev, the public folder is served at root:
@@ -111,6 +112,26 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
     }
   }
 
+  // handleDeleteBook
+  const handleDeleteBook = async (uuid: UUID): Promise<void> => {
+    // attempt to delete book
+    try {
+      const result: GeneralResponse = await window.electron.ipcRenderer.invoke(
+        'delete-book',
+        uuid
+      )
+
+      if (result.success) {
+        setBooksDataArray((prevBookData) => prevBookData.filter((data) => data.id != uuid))
+      } else {
+        console.error(result.error)
+        // TODO: show ui error
+      }
+    } catch (err) {
+      console.error('Unexpeceted error deleteing book:', err)
+    }
+  }
+
   return (
     <>
       {loading ? (
@@ -141,6 +162,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
                     bookZoomIndex={bookData.zoom_index}
                     bookTitle={bookData.title}
                     bookThumbnailURL={bookData.thumbnail_path}
+                    handleDeleteBook={handleDeleteBook}
                   />
                 ))}
               <Skeleton key={-1} visible={saveLoading}>
@@ -163,6 +185,7 @@ interface LibraryItemProps {
   bookZoomLevel: number
   bookZoomIndex: number
   bookThumbnailURL: string
+  handleDeleteBook: (uuid: UUID) => void
 }
 
 export const LibraryItem: React.FC<LibraryItemProps> = ({
@@ -173,7 +196,8 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   bookFrontCoverPage,
   bookZoomLevel,
   bookZoomIndex,
-  bookThumbnailURL
+  bookThumbnailURL,
+  handleDeleteBook
 }) => {
   const [editingTitle, setEditingTitle] = useState<boolean>(false)
   const [bookTitleText, setBookTitleText] = useState<string>(bookTitle || 'No title found')
@@ -285,7 +309,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
               </Menu.Item>
               <Menu.Divider />
               <Menu.Label>Danger zone</Menu.Label>
-              <Menu.Item color="red" leftSection={<HiOutlineTrash />}>
+              <Menu.Item color="red" leftSection={<HiOutlineTrash />} onClick={() => handleDeleteBook(bookUUID)}>
                 Delete book
               </Menu.Item>
             </Menu.Dropdown>
