@@ -22,6 +22,7 @@ export const setupBookIpcHandlers = async (): Promise<void> => {
   await saveBookZoomAndIndex()
   await updateBookAsMostRecent()
   await deleteBook()
+  await bookSingleFieldUpdater()
 }
 
 // getBooksData: retrives book data
@@ -169,7 +170,7 @@ const saveBookCurrentPage = async (): Promise<void> => {
 
       let bookSavedBool = false
 
-      // update metadata.json with new currentPage for book with specific UUID arg
+      // update books.json with new currentPage for book with specific uuid
       for (const bookDataItem of booksDataJson) {
         if (bookDataItem.id === uuid) {
           bookDataItem.cur_page = currentPage
@@ -327,6 +328,49 @@ const deleteBook = async (): Promise<void> => {
     } catch (error) {
       console.log('Error fetching books data:', error)
       return { success: false, error: `Failed to save new book ${error}` }
+    }
+  })
+}
+
+// bookSingleFieldUpdater save book current page
+const bookSingleFieldUpdater = async (): Promise<void> => {
+  ipcMain.handle('update-book-field', async (_event, uuid, field, value) => {
+    let booksDataJson: BookData[] = []
+
+    try {
+      try {
+        const booksData = await fs.readFile(bookDataFilePath, 'utf-8')
+        booksDataJson = JSON.parse(booksData)
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
+          throw error
+      }
+
+      let bookSavedBool = false
+
+      // update books.json with new currentPage for book with specific uuid
+      for (const bookDataItem of booksDataJson) {
+        if (bookDataItem.id === uuid) {
+          bookDataItem[field] = value
+          bookSavedBool = true
+          break
+        }
+      }
+
+      if (!bookSavedBool) return false
+
+      await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2), 'utf-8')
+
+      console.log(`Updated ${field} with ${value} for book ${uuid}`)
+
+      return {
+        success: true,
+        updated_field: field,
+        updated_value: value,
+      }
+    } catch (error) {
+      console.log(`Error updating ${field} with ${value} for book ${uuid}`, error)
+      return {success: false, error: `Failed to update ${field}: ${error}`}
     }
   })
 }

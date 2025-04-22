@@ -133,11 +133,6 @@
   padding: 0 !important;
   height: 100% !important;
 }
-
-.title-box:hover {
-  border-color: white;
-}
-
 .pageinfo-box {
   text-align: center;
   width: 100%;

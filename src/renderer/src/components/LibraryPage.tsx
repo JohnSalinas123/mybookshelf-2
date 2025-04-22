@@ -19,7 +19,8 @@ import {
   ActionIcon,
   Menu,
   NumberInput,
-  Switch
+  Switch,
+  TextInput
 } from '@mantine/core'
 import { useNavigate } from 'react-router'
 
@@ -77,7 +78,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
   // fetchBooksData fetches all book data on intial load
   const fetchBooksData = async (): Promise<void> => {
     try {
-      const booksData = await window.electron.ipcRenderer.invoke('fetch-books-data')
+      const booksData: BookData[] = await window.electron.ipcRenderer.invoke('fetch-books-data')
       setBooksDataArray(booksData)
       setLoading(false)
     } catch (error) {
@@ -116,10 +117,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
   const handleDeleteBook = async (uuid: UUID): Promise<void> => {
     // attempt to delete book
     try {
-      const result: GeneralResponse = await window.electron.ipcRenderer.invoke(
-        'delete-book',
-        uuid
-      )
+      const result: GeneralResponse = await window.electron.ipcRenderer.invoke('delete-book', uuid)
 
       if (result.success) {
         setBooksDataArray((prevBookData) => prevBookData.filter((data) => data.id != uuid))
@@ -129,6 +127,44 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
       }
     } catch (err) {
       console.error('Unexpeceted error deleteing book:', err)
+    }
+  }
+
+  // updateBookField updates a book's specified field
+  const updateBookField = async (
+    uuid: string,
+    field: keyof BookData,
+    value: BookData[typeof field]
+  ): Promise<void> => {
+    try {
+      const result = await window.electron.ipcRenderer.invoke(
+        'update-book-field',
+        uuid,
+        field,
+        value
+      )
+
+      if (!result?.success) {
+        console.log(`Failed to update ${field} for book ${uuid}:`, result?.error)
+      }
+
+      // on success update state for specific book and field
+      setBooksDataArray((prevBooks) => {
+        const updatedBooks = prevBooks.map((book) => {
+          if (book.id === uuid) {
+            return {
+              ...book,
+              [field]: value
+            }
+          }
+          return book
+        })
+        return updatedBooks
+      })
+
+      return result
+    } catch (err) {
+      console.error(`Unexpeceted error updating ${field} for book ${uuid}:`, err)
     }
   }
 
@@ -163,6 +199,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
                     bookTitle={bookData.title}
                     bookThumbnailURL={bookData.thumbnail_path}
                     handleDeleteBook={handleDeleteBook}
+                    updateBookField={updateBookField}
                   />
                 ))}
               <Skeleton key={-1} visible={saveLoading}>
@@ -186,6 +223,7 @@ interface LibraryItemProps {
   bookZoomIndex: number
   bookThumbnailURL: string
   handleDeleteBook: (uuid: UUID) => void
+  updateBookField: (uuid: string, field: keyof BookData, value: BookData[typeof field]) => void
 }
 
 export const LibraryItem: React.FC<LibraryItemProps> = ({
@@ -197,7 +235,8 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   bookZoomLevel,
   bookZoomIndex,
   bookThumbnailURL,
-  handleDeleteBook
+  handleDeleteBook,
+  updateBookField
 }) => {
   const [editingTitle, setEditingTitle] = useState<boolean>(false)
   const [bookTitleText, setBookTitleText] = useState<string>(bookTitle || 'No title found')
@@ -233,11 +272,9 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
     })
   }
 
-  // TODO:
-  // handleSaveTitle saved new title of book
-  //const handleSaveTitle = ():void => {
-  //
-  //}
+  const handleSaveTitle = async (): Promise<void> => {
+    updateBookField(bookUUID, 'title', bookTitleText)
+  }
 
   useEffect(() => {
     if (editingTitle && textareaRef.current) {
@@ -260,7 +297,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
         className={`${classes.item} ${computedColorScheme === 'dark' ? classes.dark : classes.light}`}
       >
         <Group pb={3} justify="flex-end" w={'100%'}>
-          <Menu shadow="md" width={200} position="top-start">
+          <Menu shadow="md" position="top-start">
             <Menu.Target>
               <ActionIcon
                 size="xs"
@@ -273,43 +310,69 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Label>Book settings</Menu.Label>
+              <Menu.Item p={10} component="div" className="normal-cursor" closeMenuOnClick={false}>
+                <Stack gap={2}>
+                  <Text>Title</Text>
+                  <Group p={0} justify="space-between" align="center">
+                    <TextInput
+                      defaultValue={bookTitle ? bookTitle : ''}
+                      onChange={(event) => setBookTitleText(event.currentTarget.value)}
+                      placeholder="Input placeholder"
+                    />
+                    <ActionIcon
+                      size="md"
+                      variant="outline"
+                      aria-label="Settings"
+                      onClick={handleSaveTitle}
+                    >
+                      <BiSave />
+                    </ActionIcon>
+                  </Group>
+                </Stack>
+              </Menu.Item>
               <Menu.Item className="normal-cursor" closeMenuOnClick={false}>
-                <Switch
-                  size="xs"
-                  checked={completedCheck}
-                  label="Completed"
-                  onChange={(event) => setCompletedCheck(event.currentTarget.checked)}
-                />
+                <Group>
+                  <Text>Completed</Text>
+                  <Switch
+                    size="sm"
+                    checked={completedCheck}
+                    onChange={(event) => setCompletedCheck(event.currentTarget.checked)}
+                  />
+                </Group>
               </Menu.Item>
               <Menu.Label>Manual</Menu.Label>
-              <Menu.Item className="normal-cursor" p={4} component="div" closeMenuOnClick={false}>
+              <Menu.Item className="normal-cursor" p={10} component="div" closeMenuOnClick={false}>
                 <Group justify="space-between">
-                  <Text size="sm">Page</Text>
+                  <Text size="md">Page</Text>
                   <Group>
-                    <NumberInput defaultValue={bookCurrentPage} size="xs" w={60} hideControls />
-                    <ActionIcon size="md" variant="outline" aria-label="Settings">
-                      <BiSave />
+                    <NumberInput defaultValue={bookCurrentPage} size="sm" w={60} hideControls />
+                    <ActionIcon size="lg" variant="outline" aria-label="Settings">
+                      <BiSave size={20} />
                     </ActionIcon>
                   </Group>
                 </Group>
               </Menu.Item>
-              <Menu.Item className="normal-cursor" p={4} component="div" closeMenuOnClick={false}>
+              <Menu.Item className="normal-cursor" p={10} component="div" closeMenuOnClick={false}>
                 <Group justify="space-between">
                   <Stack justify="center" gap={0} p={0}>
-                    <Text size="xs">Front</Text>
-                    <Text size="xs">Cover Page</Text>
+                    <Text size="md">Front </Text>
+                    <Text size="md">cover page</Text>
                   </Stack>
                   <Group>
-                    <NumberInput defaultValue={bookFrontCoverPage} size="xs" w={60} hideControls />
-                    <ActionIcon size="md" variant="outline" aria-label="Settings">
-                      <BiSave />
+                    <NumberInput defaultValue={bookFrontCoverPage} size="sm" w={60} hideControls />
+                    <ActionIcon size="lg" variant="outline" aria-label="Settings">
+                      <BiSave size={20} />
                     </ActionIcon>
                   </Group>
                 </Group>
               </Menu.Item>
               <Menu.Divider />
               <Menu.Label>Danger zone</Menu.Label>
-              <Menu.Item color="red" leftSection={<HiOutlineTrash />} onClick={() => handleDeleteBook(bookUUID)}>
+              <Menu.Item
+                color="red"
+                leftSection={<HiOutlineTrash />}
+                onClick={() => handleDeleteBook(bookUUID)}
+              >
                 Delete book
               </Menu.Item>
             </Menu.Dropdown>
@@ -325,40 +388,9 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
           />
         </div>
         <div className={`${classes['title-box']} ${editingTitle ? classes['editing-border'] : ''}`}>
-          {editingTitle ? (
-            <Textarea
-              ref={textareaRef}
-              aria-label="Title textarea input"
-              value={bookTitleText}
-              p={0}
-              className={classes['title-textarea']}
-              variant="unstyled"
-              maxRows={2}
-              onClick={(event) => event.stopPropagation()}
-              onChange={(event) => setBookTitleText(event.currentTarget.value)}
-              onBlur={() => {
-                setTimeout(() => setEditingTitle(false), 100)
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  setEditingTitle(false)
-                }
-              }}
-              autoFocus
-            />
-          ) : (
-            <Text
-              onClick={(event) => {
-                event.stopPropagation()
-                setEditingTitle(true)
-              }}
-              p={0}
-              className={classes.title}
-            >
-              {bookTitle}
-            </Text>
-          )}
+          <Text p={0} className={classes.title}>
+            {bookTitle}
+          </Text>
         </div>
         <div className={classes['pageinfo-box']}>
           <Text>{`${bookCurrentPage}/${bookTotalNumPages}`}</Text>
