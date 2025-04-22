@@ -6,7 +6,7 @@ import path from 'path'
 import pdf from 'pdf-parse'
 import { fromPath } from 'pdf2pic'
 
-import { BookData } from '../../types/BookData'
+import { BookData, DeletedBookData } from '../../types/BookData'
 
 const bookCopyDirPath = path.join(app.getPath('userData'), 'books')
 const thumbnailDirPath = path.join(app.getPath('userData'), 'thumbnails')
@@ -108,11 +108,14 @@ const saveNewBook = async (): Promise<void> => {
       const thumbnailURL = `app://thumbnails/${fileNameTrim}.1.png`
 
       // uuid for pdf in metadata file
-      const pdfUUID = crypto.randomUUID()
+      const bookUUID = crypto.randomUUID()
+
+      // create_at, updated_at timestamp
+      const timestamp = new Date().toISOString()
 
       // add new book info to metadata
       booksDataJson.push({
-        id: pdfUUID,
+        id: bookUUID,
         title: fileName.replace('.pdf', ''),
         file_path: destination,
         num_pages: numPages,
@@ -120,7 +123,9 @@ const saveNewBook = async (): Promise<void> => {
         front_cover_page: thumbnailDefaultPage,
         zoom_level: 100,
         zoom_index: 7,
-        thumbnail_path: thumbnailURL
+        thumbnail_path: thumbnailURL,
+        created_at: timestamp,
+        updated_at: timestamp
       })
 
       // TODO: test efficiency of loading entire metadata every time a book is added
@@ -289,6 +294,33 @@ const deleteBook = async (): Promise<void> => {
       )
 
       console.log(`Successfully deleleted book with uuid ${uuid}`)
+
+      // save deleted book to deleted-books.json
+      let deletedBooksDataJson: DeletedBookData[] = []
+
+      try {
+        const deletedBooksData = await fs.readFile(deletedBookDataFilePath, 'utf-8')
+        deletedBooksDataJson = JSON.parse(deletedBooksData)
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
+          throw error
+      }
+
+      //TODO: check if deleted-books.json is at deletion limit if so
+      // delete oldest deleted book row, also delete associated book file
+      // and book thumbnail
+
+      deletedBooksDataJson.push({
+        ...bookToDelete,
+        deleted_at: new Date().toISOString()
+      })
+
+      await fs.writeFile(
+        deletedBookDataFilePath,
+        JSON.stringify(deletedBooksDataJson, null, 2),
+        'utf-8'
+      )
+
       return {
         success: true
       }
