@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { pdfjs } from 'react-pdf'
 
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -14,7 +14,6 @@ import {
   Skeleton,
   Progress,
   useComputedColorScheme,
-  Textarea,
   Group,
   ActionIcon,
   Menu,
@@ -161,10 +160,41 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
         })
         return updatedBooks
       })
-
-      return result
     } catch (err) {
       console.error(`Unexpeceted error updating ${field} for book ${uuid}:`, err)
+    }
+  }
+
+  // updateBookThumbnailPage
+  const updateBookThumbnailPage = async (uuid: UUID, page: number): Promise<void> => {
+    try {
+      const result = await window.electron.ipcRenderer.invoke('update-book-thumbnail', uuid, page)
+
+      if (!result?.success) {
+        console.log(`Failed to update thumbnail for book ${uuid}:`, result?.error)
+      }
+
+      console.log(result)
+
+      setBooksDataArray((prevBooks) => {
+        const updatedBooks = prevBooks.map((book) => {
+          if (book.id === uuid) {
+            return {
+              ...book,
+              thumbnail_page: result.thumbnail_page,
+              thumbnail_path: result.thumbnail_path
+            }
+          }
+          return book
+        })
+        console.log(updatedBooks)
+        return updatedBooks
+      })
+
+
+
+    } catch (err) {
+      console.error(`Unexpeceted error updating thumbnail for book ${uuid}:`, err)
     }
   }
 
@@ -191,15 +221,17 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
                   <LibraryItem
                     key={index}
                     bookUUID={bookData.id}
+                    bookFileName={bookData.file_name_complete}
                     bookTotalNumPages={bookData.num_pages}
                     bookCurrentPage={bookData.cur_page}
-                    bookFrontCoverPage={bookData.front_cover_page}
+                    bookThumbnailPage={bookData.thumbnail_page}
                     bookZoomLevel={bookData.zoom_level}
                     bookZoomIndex={bookData.zoom_index}
                     bookTitle={bookData.title}
                     bookThumbnailURL={bookData.thumbnail_path}
                     handleDeleteBook={handleDeleteBook}
                     updateBookField={updateBookField}
+                    updateBookThumbnailPage={updateBookThumbnailPage}
                   />
                 ))}
               <Skeleton key={-1} visible={saveLoading}>
@@ -215,36 +247,40 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
 
 interface LibraryItemProps {
   bookUUID: UUID
+  bookFileName: string
   bookTitle: string | null
   bookTotalNumPages: number
   bookCurrentPage: number
-  bookFrontCoverPage: number
+  bookThumbnailPage: number
   bookZoomLevel: number
   bookZoomIndex: number
   bookThumbnailURL: string
   handleDeleteBook: (uuid: UUID) => void
-  updateBookField: (uuid: string, field: keyof BookData, value: BookData[typeof field]) => void
+  updateBookField: (uuid: UUID, field: keyof BookData, value: BookData[typeof field]) => void
+  updateBookThumbnailPage: (uuid: UUID, page: number) => void
 }
 
 export const LibraryItem: React.FC<LibraryItemProps> = ({
   bookUUID,
+  bookFileName,
   bookTitle,
   bookTotalNumPages,
   bookCurrentPage,
-  bookFrontCoverPage,
+  bookThumbnailPage,
   bookZoomLevel,
   bookZoomIndex,
   bookThumbnailURL,
   handleDeleteBook,
-  updateBookField
+  updateBookField,
+  updateBookThumbnailPage
 }) => {
-  const [editingTitle, setEditingTitle] = useState<boolean>(false)
   const [bookTitleText, setBookTitleText] = useState<string>(bookTitle || 'No title found')
   const [completedCheck, setCompletedCheck] = useState<boolean>(false)
+  const [bookThumbnailPageState, setBookThumnailPageState] = useState<number | string>(
+    bookThumbnailPage
+  )
 
   const navigate = useNavigate()
-
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
 
@@ -252,12 +288,10 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
 
   // handleOpenBook navigates to reader and passes book data
   const handleOpenBook = (): void => {
-    // disabled if currently editting the library item's title
-    if (editingTitle) return
-
     // TODO: change to be more general when added file_type to book data
     // make more general to work with other types of e-book formats
-    const bookFilePath = `app://books/${bookTitle}.pdf`
+    const bookFilePath = `app://books/${bookFileName}`
+    console.log(bookFilePath)
     console.log('LIBRARY PAGE ZOOM:', bookZoomLevel, bookZoomIndex)
     navigate(`/reader`, {
       state: {
@@ -276,13 +310,13 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
     updateBookField(bookUUID, 'title', bookTitleText)
   }
 
-  useEffect(() => {
-    if (editingTitle && textareaRef.current) {
-      const textarea = textareaRef.current
-      textarea.focus()
-      textarea.setSelectionRange(textarea.value.length, textarea.value.length)
-    }
-  }, [editingTitle])
+  const handleUpdateThumbnailPage = async (): Promise<void> => {
+    if (typeof bookThumbnailPageState != 'number' && Number.isFinite(bookThumbnailPageState)) return;
+
+    if (bookThumbnailPage == Number(bookThumbnailPageState)) return;
+
+    updateBookThumbnailPage(bookUUID, Number(bookThumbnailPageState))
+  }
 
   return (
     <>
@@ -359,8 +393,19 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
                     <Text size="md">cover page</Text>
                   </Stack>
                   <Group>
-                    <NumberInput defaultValue={bookFrontCoverPage} size="sm" w={60} hideControls />
-                    <ActionIcon size="lg" variant="outline" aria-label="Settings">
+                    <NumberInput
+                      defaultValue={bookThumbnailPage}
+                      size="sm"
+                      w={60}
+                      hideControls
+                      onChange={setBookThumnailPageState}
+                    />
+                    <ActionIcon
+                      size="lg"
+                      variant="outline"
+                      aria-label="Settings"
+                      onClick={handleUpdateThumbnailPage}
+                    >
                       <BiSave size={20} />
                     </ActionIcon>
                   </Group>
@@ -387,7 +432,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
             onClick={handleOpenBook}
           />
         </div>
-        <div className={`${classes['title-box']} ${editingTitle ? classes['editing-border'] : ''}`}>
+        <div className={classes['title-box']}>
           <Text p={0} className={classes.title}>
             {bookTitle}
           </Text>

@@ -23,6 +23,7 @@ export const setupBookIpcHandlers = async (): Promise<void> => {
   await updateBookAsMostRecent()
   await deleteBook()
   await bookSingleFieldUpdater()
+  await updateBookThumbnailPage()
 }
 
 // getBooksData: retrives book data
@@ -62,13 +63,13 @@ const saveNewBook = async (): Promise<void> => {
   ipcMain.handle('save-new-book', async (_event, filePath) => {
     try {
       const fileName = path.basename(filePath)
-      const destination = path.join(bookCopyDirPath, fileName)
+      const bookFileCopyPath = path.join(bookCopyDirPath, fileName)
 
       // copy book to storage
-      await fs.copyFile(filePath, destination)
+      await fs.copyFile(filePath, bookFileCopyPath)
 
       // read book as a buffer
-      const pdfBuffer = await fs.readFile(destination)
+      const pdfBuffer = await fs.readFile(bookFileCopyPath)
 
       // TODO: generalize to work for other e-book file types, such as epub
       // extract number of pages
@@ -77,12 +78,14 @@ const saveNewBook = async (): Promise<void> => {
 
       // format filename for saving thumbnail
       const fileNameTrim = fileName.replace('.pdf', '')
-      //console.log('Filename trimmed:', fileNameTrim)
+      console.log('Filepath:', filePath)
+      console.log('Filename:', fileName)
+      console.log('Filename trimmed:', fileNameTrim)
 
       // generate first-page thumbnail
-      const converter = fromPath(destination, {
+      const converter = fromPath(bookFileCopyPath, {
         density: 150,
-        saveFilename: `${fileNameTrim}`,
+        saveFilename: fileNameTrim,
         savePath: thumbnailDirPath,
         format: 'png',
         width: 300
@@ -106,7 +109,7 @@ const saveNewBook = async (): Promise<void> => {
       }
 
       // thumbnail url
-      const thumbnailURL = `app://thumbnails/${fileNameTrim}.1.png`
+      const thumbnailURL = `app://thumbnails/${fileNameTrim}.${thumbnailDefaultPage}.png`
 
       // uuid for pdf in metadata file
       const bookUUID = crypto.randomUUID()
@@ -118,10 +121,12 @@ const saveNewBook = async (): Promise<void> => {
       booksDataJson.push({
         id: bookUUID,
         title: fileName.replace('.pdf', ''),
-        file_path: destination,
+        file_name: fileNameTrim,
+        file_name_complete: fileName,
+        file_path: bookFileCopyPath,
         num_pages: numPages,
         cur_page: 0,
-        front_cover_page: thumbnailDefaultPage,
+        thumbnail_page: thumbnailDefaultPage,
         zoom_level: 100,
         zoom_index: 7,
         thumbnail_path: thumbnailURL,
@@ -137,11 +142,14 @@ const saveNewBook = async (): Promise<void> => {
       return {
         success: true,
         book_data: {
+          id: bookUUID,
           title: fileName.replace('.pdf', ''),
-          file_path: destination,
+          file_name: fileNameTrim,
+          file_name_complete: fileName,
+          file_path: bookFileCopyPath,
           num_pages: numPages,
           cur_page: 0,
-          front_cover_page: thumbnailDefaultPage,
+          thumbnail_page: thumbnailDefaultPage,
           zoom_level: 100,
           zoom_index: 7,
           thumbnail_path: thumbnailURL
@@ -366,11 +374,97 @@ const bookSingleFieldUpdater = async (): Promise<void> => {
       return {
         success: true,
         updated_field: field,
-        updated_value: value,
+        updated_value: value
       }
     } catch (error) {
       console.log(`Error updating ${field} with ${value} for book ${uuid}`, error)
-      return {success: false, error: `Failed to update ${field}: ${error}`}
+      return { success: false, error: `Failed to update ${field}: ${error}` }
+    }
+  })
+}
+
+const updateBookThumbnailPage = async (): Promise<void> => {
+  ipcMain.handle('update-book-thumbnail', async (_event, uuid, page) => {
+    console.log(`attempting to update book thumbnail to page ${page}`)
+    let booksDataJson: BookData[] = []
+
+    try {
+      // TODO: improve error handling for reading book file
+      try {
+        const bookData = await fs.readFile(bookDataFilePath, 'utf-8')
+        booksDataJson = JSON.parse(bookData)
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT')
+          throw error
+      }
+
+      const bookDataItem = booksDataJson.find((item) => item.id === uuid)
+
+      if (!bookDataItem) {
+        throw new Error(`No book found with uuid: ${uuid}`)
+      }
+
+      if (!bookDataItem.thumbnail_path || bookDataItem.thumbnail_path == '') {
+        throw new Error(`Missing thumbnail path for book with uuid ${uuid}`)
+      }
+
+      if (!bookDataItem.file_path || bookDataItem.file_path == '') {
+        throw new Error(`Missing file path for book with uuid ${uuid}`)
+      }
+
+      const thumbnailFileName = path.basename(bookDataItem.thumbnail_path)
+      // TODO: generalize to work with other file formats
+      const thumbnailFileNameTrimmed = thumbnailFileName.replace(
+        `.${bookDataItem.thumbnail_page}.png`,
+        ''
+      )
+
+      // generate new page as thumbnail
+      const converter = fromPath(bookDataItem.file_path, {
+        density: 150,
+        saveFilename: thumbnailFileNameTrimmed,
+        savePath: thumbnailDirPath,
+        format: 'png',
+        width: 300
+      })
+
+      try {
+        await converter(page, { responseType: 'image' })
+      } catch (error) {
+        throw new Error(
+          `Failed to generate thumbnail for book uuid ${uuid}: ${error instanceof Error ? error.message : String(error)}`
+        )
+      }
+
+      // delete old thumbnail
+      const oldThumbnailPath = path.join(thumbnailDirPath, thumbnailFileName)
+      try {
+        console.log(oldThumbnailPath)
+        await fs.unlink(oldThumbnailPath)
+        console.log(`Deleted old thumbnail: ${oldThumbnailPath}`)
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+          throw new Error(`Failed to delete old thumbnail: ${error}`)
+        } else {
+          console.warn(`Old thumbnail not found, skipping delete: ${oldThumbnailPath}`)
+        }
+      }
+
+      // update thumbnail_page and save books data back to file
+      const newThumbnailPath = `app://thumbnails/${bookDataItem.file_name}.${page}.png`
+      bookDataItem.thumbnail_page = page
+      bookDataItem.thumbnail_path = newThumbnailPath
+
+      await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2))
+
+      return {
+        success: true,
+        thumbnail_page: page,
+        thumbnail_path: newThumbnailPath
+      }
+    } catch (error) {
+      console.error(`Error updating book thumbnail page: ${error}`)
+      return { success: false, error: `Failed to save new book: ${error}` }
     }
   })
 }
