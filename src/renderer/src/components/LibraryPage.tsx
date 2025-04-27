@@ -218,6 +218,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
                   <LibraryItem
                     key={index}
                     bookUUID={bookData.id}
+                    bookCompleted={bookData.completed}
                     bookFileName={bookData.file_name_complete}
                     bookTotalNumPages={bookData.num_pages}
                     bookCurrentPage={bookData.cur_page}
@@ -246,6 +247,7 @@ interface LibraryItemProps {
   bookUUID: UUID
   bookFileName: string
   bookTitle: string | null
+  bookCompleted: boolean
   bookTotalNumPages: number
   bookCurrentPage: number
   bookThumbnailPage: number
@@ -261,6 +263,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   bookUUID,
   bookFileName,
   bookTitle,
+  bookCompleted,
   bookTotalNumPages,
   bookCurrentPage,
   bookThumbnailPage,
@@ -272,7 +275,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   updateBookThumbnailPage
 }) => {
   const [bookTitleState, setBookTitleState] = useState<string>(bookTitle || 'No title found')
-  const [completedCheck, setCompletedCheck] = useState<boolean>(false)
+  const [bookCompletedState, setBookCompletedState] = useState<boolean>(bookCompleted)
   const [bookCurrentPageState, setCurrentPageState] = useState<number | string>(bookCurrentPage)
   const [bookThumbnailPageState, setBookThumnailPageState] = useState<number | string>(
     bookThumbnailPage
@@ -310,6 +313,10 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
 
   const handleSaveNewCurrentPage = async (): Promise<void> => {
     updateBookField(bookUUID, 'cur_page', bookCurrentPageState)
+  }
+
+  const handleSaveCompleted = async (checkedVal : boolean): Promise<void> => {
+    updateBookField(bookUUID, 'completed', checkedVal)
   }
 
   const handleUpdateThumbnailPage = async (): Promise<void> => {
@@ -371,8 +378,12 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
                   <Text>Completed</Text>
                   <Switch
                     size="sm"
-                    checked={completedCheck}
-                    onChange={(event) => setCompletedCheck(event.currentTarget.checked)}
+                    checked={bookCompletedState}
+                    onChange={(event) => {
+                      const newCompletedState = event.currentTarget.checked
+                      setBookCompletedState(newCompletedState)
+                      handleSaveCompleted(newCompletedState)
+                    }}
                   />
                 </Group>
               </Menu.Item>
@@ -441,7 +452,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
         </div>
         <div className={classes['pageinfo-box']}>
           <Text>{`${bookCurrentPage}/${bookTotalNumPages}`}</Text>
-          <Progress value={percentageRead} />
+          <Progress value={bookCompleted ? 100 : percentageRead} color={`${bookCompleted ? 'grey' : 'blue'}`} />
         </div>
       </Paper>
     </>

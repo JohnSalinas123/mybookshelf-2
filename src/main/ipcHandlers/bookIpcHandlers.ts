@@ -117,10 +117,10 @@ const saveNewBook = async (): Promise<void> => {
       // create_at, updated_at timestamp
       const timestamp = new Date().toISOString()
 
-      // add new book info to metadata
-      booksDataJson.push({
+      const newBookObj: BookData = {
         id: bookUUID,
         title: fileName.replace('.pdf', ''),
+        completed: false,
         file_name: fileNameTrim,
         file_name_complete: fileName,
         file_path: bookFileCopyPath,
@@ -132,7 +132,10 @@ const saveNewBook = async (): Promise<void> => {
         thumbnail_path: thumbnailURL,
         created_at: timestamp,
         updated_at: timestamp
-      })
+      }
+
+      // add new book info to metadata
+      booksDataJson.push(newBookObj)
 
       // TODO: test efficiency of loading entire metadata every time a book is added
       // -> find better way to appending to existing metadata
@@ -141,19 +144,7 @@ const saveNewBook = async (): Promise<void> => {
 
       return {
         success: true,
-        book_data: {
-          id: bookUUID,
-          title: fileName.replace('.pdf', ''),
-          file_name: fileNameTrim,
-          file_name_complete: fileName,
-          file_path: bookFileCopyPath,
-          num_pages: numPages,
-          cur_page: 0,
-          thumbnail_page: thumbnailDefaultPage,
-          zoom_level: 100,
-          zoom_index: 7,
-          thumbnail_path: thumbnailURL
-        }
+        book_data: newBookObj
       }
     } catch (error) {
       console.error('Error saving new book:', error)

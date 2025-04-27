@@ -3,6 +3,7 @@ import { UUID } from "crypto"
 export interface BookData {
   id: UUID
   title: string | null
+  completed: boolean,
   file_name: string,
   file_name_complete: string,
   file_path: string

@@ -137,3 +137,7 @@
   text-align: center;
   width: 100%;
 }
+
+.completed {
+  color: grey !important;
+}
