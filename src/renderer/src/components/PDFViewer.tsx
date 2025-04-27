@@ -18,6 +18,7 @@ interface PDFViewerProps {
 
 export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
   ({ bookFilePath, listRef, listHeight, numPages, initialPage, pageSize, setCurrentPage }) => {
+    /*
     console.log('Rendering PDFViewer with props:', {
       bookFilePath,
       listHeight,
@@ -25,6 +26,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
       initialPage,
       pageSize
     })
+      */
 
     const [pageHeight, setPageHeight] = useState<number>(800)
     const SPACER_HEIGHT = 16
@@ -33,7 +35,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
     const [pdfDocument, setPdfDocument] = useState<pdfjs.PDFDocumentProxy | null>(null)
 
     useEffect(() => {
-      console.log('CURRENT PAGE', initialPage)
+      //console.log('CURRENT PAGE', initialPage)
       // scroll to saved page number
       if (listRef.current) {
         listRef.current.scrollToItem(Number(initialPage) - 1, 'start')
@@ -48,7 +50,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
         const viewport = firstPage.getViewport({ scale: 1 })
         const scale = pageSize / viewport.width
         const height = viewport.height * scale
-        console.log('Computed page height:', height)
+        //console.log('Computed page height:', height)
         setPageHeight(height)
         listRef.current?.resetAfterIndex(0)
       }
@@ -74,11 +76,11 @@ export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
                 (baseScrollOffset + scrollOffset) / (pageHeight + SPACER_HEIGHT)
               )
 
-              console.log('PAGEHEIGHT', pageHeight)
-              console.log(baseScrollOffset)
-              console.log('SCROLLOFFSET:', baseScrollOffset + scrollOffset)
-              console.log((baseScrollOffset + scrollOffset) / pageHeight)
-              console.log('VISIBLE PAGE INDEX', visiblePageIndex)
+              //console.log('PAGEHEIGHT', pageHeight)
+              //console.log(baseScrollOffset)
+              //console.log('SCROLLOFFSET:', baseScrollOffset + scrollOffset)
+              //console.log((baseScrollOffset + scrollOffset) / pageHeight)
+              //console.log('VISIBLE PAGE INDEX', visiblePageIndex)
 
               setCurrentPage(visiblePageIndex + 1)
             }}
@@ -108,7 +110,7 @@ interface PDFLoadingPageProps {
 
 const PDFLoadingPage: React.FC<PDFLoadingPageProps> = ({pageHeight}) => {
 
-  console.log("PAGE HEIGHT LOADING", pageHeight)
+  //console.log("PAGE HEIGHT LOADING", pageHeight)
   return (
     <>
       <Center h={pageHeight} w="100%">
