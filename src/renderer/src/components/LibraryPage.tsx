@@ -339,7 +339,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
                 size="xs"
                 variant="subtle"
                 aria-label="Settings"
-                color="rgba(255, 255, 255, 1)"
+                
               >
                 <RxDotsHorizontal />
               </ActionIcon>
