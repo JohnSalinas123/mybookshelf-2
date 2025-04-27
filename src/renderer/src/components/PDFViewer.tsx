@@ -7,7 +7,7 @@ import classes from './PDFViewer.module.css'
 import { Center, Loader } from '@mantine/core'
 
 interface PDFViewerProps {
-  pdfPath: string
+  bookFilePath: string
   listRef: React.RefObject<List>
   listHeight: number
   numPages: number
@@ -17,9 +17,9 @@ interface PDFViewerProps {
 }
 
 export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
-  ({ pdfPath, listRef, listHeight, numPages, initialPage, pageSize, setCurrentPage }) => {
+  ({ bookFilePath, listRef, listHeight, numPages, initialPage, pageSize, setCurrentPage }) => {
     console.log('Rendering PDFViewer with props:', {
-      pdfPath,
+      bookFilePath,
       listHeight,
       numPages,
       initialPage,
@@ -58,7 +58,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
 
     return (
       <div style={{ width: pageSize }}>
-        <Document loading={<PDFLoadingPage pageHeight={pageHeight} />} file={pdfPath} onLoadSuccess={setPdfDocument} className={classes.document}>
+        <Document loading={<PDFLoadingPage pageHeight={pageHeight} />} file={bookFilePath} onLoadSuccess={setPdfDocument} className={classes.document}>
           <List
             ref={listRef}
             className={classes['page-list']}
