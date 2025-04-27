@@ -190,9 +190,6 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
         console.log(updatedBooks)
         return updatedBooks
       })
-
-
-
     } catch (err) {
       console.error(`Unexpeceted error updating thumbnail for book ${uuid}:`, err)
     }
@@ -274,8 +271,9 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   updateBookField,
   updateBookThumbnailPage
 }) => {
-  const [bookTitleText, setBookTitleText] = useState<string>(bookTitle || 'No title found')
+  const [bookTitleState, setBookTitleState] = useState<string>(bookTitle || 'No title found')
   const [completedCheck, setCompletedCheck] = useState<boolean>(false)
+  const [bookCurrentPageState, setCurrentPageState] = useState<number | string>(bookCurrentPage)
   const [bookThumbnailPageState, setBookThumnailPageState] = useState<number | string>(
     bookThumbnailPage
   )
@@ -307,13 +305,17 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
   }
 
   const handleSaveTitle = async (): Promise<void> => {
-    updateBookField(bookUUID, 'title', bookTitleText)
+    updateBookField(bookUUID, 'title', bookTitleState)
+  }
+
+  const handleSaveNewCurrentPage = async (): Promise<void> => {
+    updateBookField(bookUUID, 'cur_page', bookCurrentPageState)
   }
 
   const handleUpdateThumbnailPage = async (): Promise<void> => {
-    if (typeof bookThumbnailPageState != 'number' && Number.isFinite(bookThumbnailPageState)) return;
+    if (typeof bookThumbnailPageState != 'number' && Number.isFinite(bookThumbnailPageState)) return
 
-    if (bookThumbnailPage == Number(bookThumbnailPageState)) return;
+    if (bookThumbnailPage == Number(bookThumbnailPageState)) return
 
     updateBookThumbnailPage(bookUUID, Number(bookThumbnailPageState))
   }
@@ -349,8 +351,8 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
                   <Text>Title</Text>
                   <Group p={0} justify="space-between" align="center">
                     <TextInput
-                      defaultValue={bookTitle ? bookTitle : ''}
-                      onChange={(event) => setBookTitleText(event.currentTarget.value)}
+                      defaultValue={bookTitleState ? bookTitleState : ''}
+                      onChange={(event) => setBookTitleState(event.currentTarget.value)}
                       placeholder="Input placeholder"
                     />
                     <ActionIcon
@@ -379,8 +381,8 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
                 <Group justify="space-between">
                   <Text size="md">Page</Text>
                   <Group>
-                    <NumberInput defaultValue={bookCurrentPage} size="sm" w={60} hideControls />
-                    <ActionIcon size="lg" variant="outline" aria-label="Settings">
+                    <NumberInput defaultValue={bookCurrentPageState} size="sm" w={60} hideControls onChange={setCurrentPageState} />
+                    <ActionIcon size="lg" variant="outline" aria-label="Settings" onClick={handleSaveNewCurrentPage}>
                       <BiSave size={20} />
                     </ActionIcon>
                   </Group>
