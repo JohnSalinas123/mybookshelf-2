@@ -76,8 +76,14 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   const lastSavedPageRef = useRef(lastSavedPage)
 
   useEffect(() => {
-    currentPageRef.current = currentPage
-    console.log('UPDATING currentPageRef.current', currentPageRef.current)
+    if (Number(currentPage) <= 1) return
+
+    if (currentPageRef.current !== currentPage) {
+      currentPageRef.current = currentPage
+      console.log('TEST:', Number(currentPage))
+      setInitialPage(Number(currentPage))
+      console.log('UPDATING currentPageRef.current', currentPageRef.current)
+    }
   }, [currentPage])
 
   useEffect(() => {
@@ -91,7 +97,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
       console.log(`Saving current page, ${currentPageVal}, of ${bookTitle}`)
       console.log(bookUUID)
       const pdfSavedBoolean = await window.electron.ipcRenderer.invoke(
-        'save-pdf-page',
+        'save-book-page',
         bookUUID,
         currentPageVal
       )
@@ -99,6 +105,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
       if (pdfSavedBoolean) {
         console.log(`Saved page, ${currentPage}`)
         setLastSavedPage(currentPageVal)
+        //setInitialPage(currentPageVal)
         lastSavedPageRef.current = currentPageVal
       } else {
         console.log('Failed to save current page')
@@ -176,7 +183,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   // handlePageSizePlus handles increase in page zoom
   const handlePageSizePlus = (): void => {
     if (varPageSizeIndex + 1 < varPageSizeArr.length) {
-      console.log('PAGE ZOOM PLUS')
+      //console.log('PAGE ZOOM PLUS')
       const newVarPageSizeIndex = varPageSizeIndex + 1
       setVarPageSizeIndex(newVarPageSizeIndex)
       setVarPageSize(varPageSizeArr[newVarPageSizeIndex])
@@ -204,12 +211,12 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
     }
   }
 
-  console.log('ZOOM bookZoomLevel', bookZoomLevel)
+  //console.log('ZOOM bookZoomLevel', bookZoomLevel)
   useEffect(() => {
-    console.log('INITIAL PAGE ZOOM:', varPageSize)
+    //console.log('INITIAL PAGE ZOOM:', varPageSize)
     const pageSizeScaleFactor = varPageSize / 100
-    console.log('ZOOM baseViewportW', baseViewportWidth)
-    console.log('ZOOM CALC:', pageSizeScaleFactor, baseViewportWidth * pageSizeScaleFactor)
+    //console.log('ZOOM baseViewportW', baseViewportWidth)
+    //console.log('ZOOM CALC:', pageSizeScaleFactor, baseViewportWidth * pageSizeScaleFactor)
     setPageSize(baseViewportWidth * pageSizeScaleFactor)
   }, [varPageSize])
 
