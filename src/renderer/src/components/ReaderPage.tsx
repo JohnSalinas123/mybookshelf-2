@@ -40,6 +40,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
 
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<List>(null)
+  const initialPageRef = useRef<number>(1)
 
   const [listHeight, setListHeight] = useState(window.innerHeight - 90)
 
@@ -78,37 +79,39 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   useEffect(() => {
     if (Number(currentPage) <= 1) return
 
+    console.log('CURRENT PAGE', currentPage)
+
     if (currentPageRef.current !== currentPage) {
       currentPageRef.current = currentPage
       console.log('TEST:', Number(currentPage))
-      setInitialPage(Number(currentPage))
+      initialPageRef.current = Number(currentPage)
       console.log('UPDATING currentPageRef.current', currentPageRef.current)
     }
   }, [currentPage])
 
   useEffect(() => {
     const savePageInterval = setInterval(async () => {
-      const currentPageVal = Number(currentPageRef.current)
+      try {
+        const currentPageVal = Number(currentPageRef.current)
 
-      if (Number(lastSavedPageRef.current) == currentPageVal) return
+        if (Number(lastSavedPageRef.current) == currentPageVal) return
 
-      console.log(Number(lastSavedPageRef.current), Number(currentPageRef.current))
+        const result = await window.electron.ipcRenderer.invoke(
+          'update-book-field',
+          bookUUID,
+          'cur_page',
+          currentPageVal
+        )
 
-      console.log(`Saving current page, ${currentPageVal}, of ${bookTitle}`)
-      console.log(bookUUID)
-      const pdfSavedBoolean = await window.electron.ipcRenderer.invoke(
-        'save-book-page',
-        bookUUID,
-        currentPageVal
-      )
-      console.log(pdfSavedBoolean)
-      if (pdfSavedBoolean) {
-        console.log(`Saved page, ${currentPage}`)
-        setLastSavedPage(currentPageVal)
-        //setInitialPage(currentPageVal)
-        lastSavedPageRef.current = currentPageVal
-      } else {
-        console.log('Failed to save current page')
+        if (result?.success) {
+          console.log(`Successfully saved current page ${currentPage} for book ${bookUUID}`)
+          setLastSavedPage(currentPageVal)
+          lastSavedPageRef.current = currentPageVal
+        } else {
+          console.log(`Failed to save current page for book ${bookUUID}`)
+        }
+      } catch (error) {
+        console.error(`Unexpected error saving page for book ${bookUUID}:`, error)
       }
     }, 5000)
 
@@ -187,6 +190,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
       const newVarPageSizeIndex = varPageSizeIndex + 1
       setVarPageSizeIndex(newVarPageSizeIndex)
       setVarPageSize(varPageSizeArr[newVarPageSizeIndex])
+      setInitialPage(initialPageRef.current)
       window.electron.ipcRenderer.send(
         'save-page-zoom',
         bookUUID,
@@ -202,6 +206,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
       const newVarPageSizeIndex = varPageSizeIndex - 1
       setVarPageSizeIndex(newVarPageSizeIndex)
       setVarPageSize(varPageSizeArr[newVarPageSizeIndex])
+      setInitialPage(initialPageRef.current)
       window.electron.ipcRenderer.send(
         'save-page-zoom',
         bookUUID,
