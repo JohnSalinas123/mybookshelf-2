@@ -2,10 +2,10 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-
 }
 
-html,body {
+html,
+body {
   width: 100%;
   height: 100%;
 }
@@ -19,16 +19,6 @@ html,body {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif !important;
   line-height: 1.5;
   font-weight: 400;
-
-  --active: rgba(94,234,212,1);
-  --disabled: rgb(174, 174, 174);
-
-  --purple: rgb(73, 78, 117);
-  --purple-light: rgb(133, 137, 172);
-  --brown-light: #C5A48A;
-  --brown-: #A47551;
-  --grey: rgb(85, 95, 104);
-  --grey-light: rgb(102, 115, 125);
 
   --main: #4b6882;
   --sub: #7b93a5;
@@ -60,4 +50,8 @@ html,body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.normal-cursor {
+  cursor: default !important;
 }

@@ -23,8 +23,6 @@
     transform,
     0.2s ease-in-out;
   transition: background-color 0.3 ease-in;
-  cursor: pointer;
-
   display: flex !important;
   flex-direction: column;
   justify-content: flex-start;
@@ -56,6 +54,12 @@
   width: 200px !important;
   height: 270px !important;
   overflow: hidden;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.thumbnail-box:hover {
+  outline: #bebebe solid 1.5px;
 }
 
 .thumbnail {
@@ -129,12 +133,11 @@
   padding: 0 !important;
   height: 100% !important;
 }
-
-.title-box:hover {
-  border-color: white;
-}
-
 .pageinfo-box {
   text-align: center;
   width: 100%;
+}
+
+.completed {
+  color: grey !important;
 }

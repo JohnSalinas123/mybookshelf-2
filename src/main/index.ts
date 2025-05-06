@@ -3,8 +3,8 @@ import { join } from 'path'
 import path from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { getPdfBooksData, savePdfBook, savePdfPage } from './ipcHandlers'
 import { fileURLToPath } from 'url'
+import { setupBookIpcHandlers } from './ipcHandlers/bookIpcHandlers'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -70,14 +70,8 @@ app.whenReady().then(async () => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  // retrive book metadata
-  await getPdfBooksData()
-
-  // save pdf ipcHandler
-  await savePdfBook()
-
-  // save pdf page ipcHandler
-  await savePdfPage()
+  // setupBookIpcHandlers setup all book ipcHandlers
+  await setupBookIpcHandlers()
 
   createWindow()
 

@@ -15,11 +15,11 @@
   
 /* Track */
 ::-webkit-scrollbar-track {
-    background-color: #dbdbdb;
+    background-color: #686868;
 }
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-    background-color: grey;
+    background-color: #b7b9bb;
     border-radius: 10px;
 }

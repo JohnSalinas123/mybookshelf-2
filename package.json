@@ -1,9 +1,12 @@
 {
   "name": "mybookshelf-2",
   "version": "1.0.0",
-  "description": "A pds library application for the pdf reader.",
+  "description": "A personal library app for organizing and reading PDF files, with support for more formats coming soon.",
   "main": "./out/main/index.js",
-  "author": "johnsalinas.com",
+  "author": {
+    "name": "John Salinas",
+    "email": "salinasjohn257@gmail.com"
+  },
   "homepage": "https://electron-vite.org",
   "build": {
     "appId": "com.simpleapps.mybookshelf",
@@ -11,6 +14,10 @@
     "win": {
       "target": "nsis",
       "icon": "build/bookshelf_icon.ico"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "build/icons"
     },
     "directories": {
       "output": "dist"
@@ -40,9 +47,19 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
-    "@mantine/core": "^7.16.2",
+    "@mantine/core": "^7.17.4",
     "@mantine/dropzone": "^7.16.2",
-    "@mantine/hooks": "^7.16.2",
+    "@mantine/hooks": "^7.17.4",
+    "@mantine/tiptap": "^7.17.4",
+    "@tiptap/extension-highlight": "^2.11.7",
+    "@tiptap/extension-link": "^2.11.7",
+    "@tiptap/extension-subscript": "^2.11.7",
+    "@tiptap/extension-superscript": "^2.11.7",
+    "@tiptap/extension-text-align": "^2.11.7",
+    "@tiptap/extension-underline": "^2.11.7",
+    "@tiptap/pm": "^2.11.7",
+    "@tiptap/react": "^2.11.7",
+    "@tiptap/starter-kit": "^2.11.7",
     "clsx": "^2.1.1",
     "electron-updater": "^6.1.7",
     "pdf-lib": "^1.17.1",

@@ -1,12 +1,15 @@
 import { VscChromeMinimize } from 'react-icons/vsc'
 import { VscChromeMaximize } from 'react-icons/vsc'
 import { VscChromeClose } from 'react-icons/vsc'
+import { TfiPencilAlt } from 'react-icons/tfi'
 
 import classes from './TitleBar.module.css'
-import { ActionIcon, MantineColorScheme, Image } from '@mantine/core'
+import { ActionIcon, MantineColorScheme, Image, Group, Popover } from '@mantine/core'
 import cx from 'clsx'
 
 import { LuMoon, LuSun } from 'react-icons/lu'
+import { useState } from 'react'
+import { NotesEditor } from './NotesEditor'
 
 interface TitleBarProps {
   controls: React.ReactNode
@@ -19,6 +22,9 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   setColorScheme,
   computedColorScheme
 }) => {
+  // popover for notes state
+  const [notesPopOpened, setNotesPopOpened] = useState(false)
+
   const handleMinimize = (): void => {
     window.electron.windowControls.minimize()
   }
@@ -43,15 +49,42 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         </div>
 
         <div className={classes['main-controls-box']}>
-          <ActionIcon
-            className="sub-button"
-            onClick={() => setColorScheme(computedColorScheme === 'light' ? 'dark' : 'light')}
-            variant="outline"
-            aria-label="Toggle color scheme"
-          >
-            <LuSun className={cx(classes['theme-icon'], classes.light)} />
-            <LuMoon className={cx(classes['theme-icon'], classes.dark)} />
-          </ActionIcon>
+          <Group gap={7}>
+            <Popover
+              width={510}
+              
+              opened={notesPopOpened}
+              onChange={setNotesPopOpened}
+              offset={{ mainAxis: 30, crossAxis: -145 }}
+              withArrow
+              arrowSize={12}
+            >
+              <Popover.Target>
+                <ActionIcon
+                  className="sub-button"
+                  variant="outline"
+                  onClick={() => setNotesPopOpened((prevState) => !prevState)}
+                  aria-label="Toggle display of notes modal"
+                >
+                  <TfiPencilAlt className={classes['theme-icon']} />
+                </ActionIcon>
+              </Popover.Target>
+
+              <Popover.Dropdown>
+                <NotesEditor />
+              </Popover.Dropdown>
+            </Popover>
+
+            <ActionIcon
+              className="sub-button"
+              onClick={() => setColorScheme(computedColorScheme === 'light' ? 'dark' : 'light')}
+              variant="outline"
+              aria-label="Toggle color scheme"
+            >
+              <LuSun className={cx(classes['theme-icon'], classes.light)} />
+              <LuMoon className={cx(classes['theme-icon'], classes.dark)} />
+            </ActionIcon>
+          </Group>
           <ul className={classes['main-controls']}>
             <li onClick={handleMinimize}>
               <VscChromeMinimize />
