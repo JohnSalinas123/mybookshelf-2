@@ -7,6 +7,7 @@ import pdf from 'pdf-parse'
 import { fromPath } from 'pdf2pic'
 
 import { BookData, DeletedBookData } from '../../types/BookData'
+import { randomUUID } from 'crypto'
 
 const bookCopyDirPath = path.join(app.getPath('userData'), 'books')
 const thumbnailDirPath = path.join(app.getPath('userData'), 'thumbnails')
@@ -77,7 +78,10 @@ const saveNewBook = async (): Promise<void> => {
       const numPages = pdfInfo.numpages
 
       // format filename for saving thumbnail
-      const fileNameTrim = fileName.replace('.pdf', '')
+      //const fileNameTrim = fileName.replace('.pdf', '')
+
+      const fileNameTrim = randomUUID()
+
       console.log('Filepath:', filePath)
       console.log('Filename:', fileName)
       console.log('Filename trimmed:', fileNameTrim)
