@@ -211,7 +211,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
         </div>
       ) : (
         <>
-          <Stack gap={0}>
+          <div className={classes['library-page']}>
             <div className={classes['library-grid']}>
               {booksDataArray &&
                 booksDataArray.map((bookData, index) => (
@@ -236,7 +236,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => 
                 <div className={classes.skeleton}></div>
               </Skeleton>
             </div>
-          </Stack>
+          </div>
         </>
       )}
     </>
@@ -337,7 +337,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
         shadow="sm"
         radius="md"
         withBorder
-        className={`${classes.item} ${computedColorScheme === 'dark' ? classes.dark : classes.light}`}
+        className={`${classes['library-item']} ${computedColorScheme === 'dark' ? classes.dark : classes.light}`}
       >
         <Group pb={3} justify="flex-end" w={'100%'}>
           <Menu shadow="md" position="top-start">
