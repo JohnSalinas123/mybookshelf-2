@@ -23,7 +23,7 @@ function createWindow(): void {
       sandbox: false,
       nodeIntegrationInWorker: true
     },
-    titleBarStyle: 'hidden'
+    titleBarStyle: 'default'
   })
 
   //mainWindow.webContents.openDevTools()

@@ -23,6 +23,8 @@ body {
   --main: #4b6882;
   --sub: #7b93a5;
 
+  --bg-black: #242424;
+
   --shadow-color: 206deg 17% 33%;
   --shadow-elevation-low:
     0.3px 0.5px 0.7px hsl(var(--shadow-color) / 0.34),

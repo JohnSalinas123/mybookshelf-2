@@ -1,15 +1,12 @@
-import { VscChromeMinimize } from 'react-icons/vsc'
-import { VscChromeMaximize } from 'react-icons/vsc'
-import { VscChromeClose } from 'react-icons/vsc'
 import { TfiPencilAlt } from 'react-icons/tfi'
 
 import classes from './TitleBar.module.css'
-import { ActionIcon, MantineColorScheme, Image, Group, Popover } from '@mantine/core'
+import { ActionIcon, MantineColorScheme, Popover } from '@mantine/core'
 import cx from 'clsx'
 
 import { LuMoon, LuSun } from 'react-icons/lu'
 import { useState } from 'react'
-import { NotesEditor } from './NotesEditor'
+import { NotesEditor } from '../NotesEditor'
 
 interface TitleBarProps {
   controls: React.ReactNode
@@ -25,34 +22,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   // popover for notes state
   const [notesPopOpened, setNotesPopOpened] = useState(false)
 
-  const handleMinimize = (): void => {
-    window.electron.windowControls.minimize()
-  }
-
-  const handleMaximize = (): void => {
-    window.electron.windowControls.maximize()
-  }
-
-  const handleClose = (): void => {
-    window.electron.windowControls.close()
-  }
-
   return (
     <>
-      <div className={classes['title-bar']}>
-        <div className={classes['inner']}>
-          <div className={classes['logo']}>
-            <Image className={classes.icon} src="bookshelf.png" />
-            <div className={classes.title}>MyBookshelf</div>
-          </div>
-          <div className={classes['sub-controls']}>{controls}</div>
-        </div>
+      <div
+        className={`${classes['title-bar']} ${computedColorScheme == 'dark' ? classes['dark'] : classes['light']}`}
+      >
+        <div className={classes.controls}>
+          <div className={classes['left-controls']}>{controls}</div>
 
-        <div className={classes['main-controls-box']}>
-          <Group gap={7}>
+          <div className={classes['right-controls']}>
             <Popover
               width={510}
-              
               opened={notesPopOpened}
               onChange={setNotesPopOpened}
               offset={{ mainAxis: 30, crossAxis: -145 }}
@@ -76,26 +56,15 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             </Popover>
 
             <ActionIcon
-              className="sub-button"
+              className={`sub-button`}
               onClick={() => setColorScheme(computedColorScheme === 'light' ? 'dark' : 'light')}
               variant="outline"
               aria-label="Toggle color scheme"
             >
-              <LuSun className={cx(classes['theme-icon'], classes.light)} />
-              <LuMoon className={cx(classes['theme-icon'], classes.dark)} />
+              <LuSun className={cx(classes['mode-icon'], classes['light-mode'])} />
+              <LuMoon className={cx(classes['mode-icon'], classes['dark-mode'])} />
             </ActionIcon>
-          </Group>
-          <ul className={classes['main-controls']}>
-            <li onClick={handleMinimize}>
-              <VscChromeMinimize />
-            </li>
-            <li onClick={handleMaximize}>
-              <VscChromeMaximize />
-            </li>
-            <li onClick={handleClose}>
-              <VscChromeClose />
-            </li>
-          </ul>
+          </div>
         </div>
       </div>
     </>
