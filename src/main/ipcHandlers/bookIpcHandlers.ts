@@ -129,7 +129,7 @@ const saveNewBook = async (): Promise<void> => {
         file_name_complete: fileName,
         file_path: bookFileCopyPath,
         num_pages: numPages,
-        cur_page: 0,
+        cur_page: 1,
         thumbnail_page: thumbnailDefaultPage,
         zoom_level: 100,
         zoom_index: 7,
