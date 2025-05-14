@@ -3,10 +3,9 @@ import { join } from 'path'
 import path from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { fileURLToPath } from 'url'
 import { setupBookIpcHandlers } from './ipcHandlers/bookIpcHandlers'
 
-const __filename = fileURLToPath(import.meta.url)
+//const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const userDataPath = app.getPath('userData')
