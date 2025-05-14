@@ -60,7 +60,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   useEffect(() => {
     if (!bookUUID) return
 
-    // send IPC invoke to update metadata.json, placing this book at the first position
+    // send IPC invoke to update books.json, placing this book at the first position
     window.electron.ipcRenderer.send('update-book-as-recent', bookUUID)
   }, [bookUUID])
 
@@ -89,6 +89,9 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
     }
   }, [currentPage])
 
+  // TODO: figure out issue with book not saving current page, for page 1
+  // might have to with forward saving nature of current saving mechanism, 
+  // how it saves when it reaches the half way point of the next page
   useEffect(() => {
     const savePageInterval = setInterval(async () => {
       try {

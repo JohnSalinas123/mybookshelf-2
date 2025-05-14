@@ -9,7 +9,7 @@ import { fromPath } from 'pdf2pic'
 import { BookData, DeletedBookData } from '../../types/BookData'
 import { randomUUID } from 'crypto'
 
-const bookCopyDirPath = path.join(app.getPath('userData'), 'books')
+const booksDirPath = path.join(app.getPath('userData'), 'books')
 const thumbnailDirPath = path.join(app.getPath('userData'), 'thumbnails')
 const dataDirPath = path.join(app.getPath('userData'), 'data')
 const bookDataFilePath = path.join(dataDirPath, 'books.json')
@@ -30,7 +30,7 @@ export const setupBookIpcHandlers = async (): Promise<void> => {
 // getBooksData: retrives book data
 const getBooksData = async (): Promise<void> => {
   // make directories and files for book data if they don't exist
-  await fs.mkdir(bookCopyDirPath, { recursive: true }).catch(console.error)
+  await fs.mkdir(booksDirPath, { recursive: true }).catch(console.error)
   await fs.mkdir(thumbnailDirPath, { recursive: true }).catch(console.error)
   await fs.mkdir(dataDirPath, { recursive: true }).catch(console.error)
 
@@ -64,7 +64,7 @@ const saveNewBook = async (): Promise<void> => {
   ipcMain.handle('save-new-book', async (_event, filePath) => {
     try {
       const fileName = path.basename(filePath)
-      const bookFileCopyPath = path.join(bookCopyDirPath, fileName)
+      const bookFileCopyPath = path.join(booksDirPath, fileName)
 
       // copy book to storage
       await fs.copyFile(filePath, bookFileCopyPath)
@@ -289,14 +289,26 @@ const deleteBook = async (): Promise<void> => {
         return { success: false, error: `Book with id ${uuid} not found` }
       }
 
+      // prepare updated booksDataJson without book to be deleted
       const updatedBooksAfterDeletion = booksDataJson.filter((book) => book.id !== uuid)
 
-      await fs.writeFile(
+      try {
+        await fs.writeFile(
         bookDataFilePath,
         JSON.stringify(updatedBooksAfterDeletion, null, 2),
         'utf-8'
-      )
+        )
+      } catch (error) {
+        throw Error(`Failed to write updated books data without book to be deleted: ${error}`)
+      }
 
+      // after deleting of book from data
+      // clean up books and thumbnail storage
+      const bookFileToDeleteName = path.basename(bookToDelete.file_path)
+      const thumbnailToDeleteName = path.basename(bookToDelete.thumbnail_path)
+
+
+      
       console.log(`Successfully deleleted book with uuid ${uuid}`)
 
       // save deleted book to deleted-books.json
@@ -313,6 +325,11 @@ const deleteBook = async (): Promise<void> => {
       //TODO: check if deleted-books.json is at deletion limit if so
       // delete oldest deleted book row, also delete associated book file
       // and book thumbnail
+
+      // get length of deleted-books.json content
+      const deletedBooksLength = deletedBooksDataJson.length
+
+
 
       deletedBooksDataJson.push({
         ...bookToDelete,

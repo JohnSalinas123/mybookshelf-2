@@ -307,18 +307,23 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
     })
   }
 
+  // handleSaveTitle use updateBookField to save new title
   const handleSaveTitle = async (): Promise<void> => {
     updateBookField(bookUUID, 'title', bookTitleState)
   }
 
+  // handleSaveNewCurrentPage use updateBookField to save new book current page
   const handleSaveNewCurrentPage = async (): Promise<void> => {
     updateBookField(bookUUID, 'cur_page', bookCurrentPageState)
   }
 
+  // handleSaveCompleted use updateBookField to save new book completed status
+  // checkedVal : boolean
   const handleSaveCompleted = async (checkedVal : boolean): Promise<void> => {
     updateBookField(bookUUID, 'completed', checkedVal)
   }
 
+  // handleUpdateThumbnailPage use updateBookThumbnailPage to update thumbnail page for book
   const handleUpdateThumbnailPage = async (): Promise<void> => {
     if (typeof bookThumbnailPageState != 'number' && Number.isFinite(bookThumbnailPageState)) return
 
