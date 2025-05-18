@@ -40,7 +40,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
 
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<List>(null)
-  const initialPageRef = useRef<number>(1)
+  const initialPageRef = useRef<number>(bookCurrentPage)
 
   const [listHeight, setListHeight] = useState(window.innerHeight - 90)
 
