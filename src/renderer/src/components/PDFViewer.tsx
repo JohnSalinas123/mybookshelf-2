@@ -18,15 +18,6 @@ interface PDFViewerProps {
 
 export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
   ({ bookFilePath, listRef, listHeight, numPages, initialPage, pageSize, setCurrentPage }) => {
-    /*
-    console.log('Rendering PDFViewer with props:', {
-      bookFilePath,
-      listHeight,
-      numPages,
-      initialPage,
-      pageSize
-    })
-      */
 
     const [pageHeight, setPageHeight] = useState<number>(800)
     const SPACER_HEIGHT = 16
@@ -60,7 +51,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
 
     return (
       <div style={{ width: pageSize }}>
-        <Document loading={<PDFLoadingPage pageHeight={pageHeight} />} file={bookFilePath} onLoadSuccess={setPdfDocument} className={classes.document}>
+        <Document loading={<PDFLoadingPage pageHeight={pageHeight} />} file={bookFilePath} onLoadSuccess={setPdfDocument} className={classes.document} renderMode="canvas">
           <List
             ref={listRef}
             className={classes['page-list']}
