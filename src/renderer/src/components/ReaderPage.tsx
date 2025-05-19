@@ -2,21 +2,22 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 import classes from './ReaderPage.module.css'
 import { useEffect, useRef, useState } from 'react'
-import { ActionIcon, Divider, NumberInput, Stack, Text } from '@mantine/core'
+import { ActionIcon, Divider, NumberInput, Stack, Text, useComputedColorScheme } from '@mantine/core'
 import { FaArrowLeft } from 'react-icons/fa'
 
-import { AiFillPrinter, AiOutlineMinus, AiOutlinePlus } from 'react-icons/ai'
-import { IoSettingsSharp } from 'react-icons/io5'
+import { AiOutlineMinus, AiOutlinePlus } from 'react-icons/ai'
 
 import { VariableSizeList as List } from 'react-window'
 import React from 'react'
 import { PDFViewer } from './PDFViewer'
+import { ControlActionButton } from './Buttons/ControlActionButton'
 
 interface ReaderPageProps {
-  setTitleBarControls: (controls: React.ReactNode) => void
+  setLeftControls: (controls: React.ReactNode) => void
+  setMiddleControls: (controls: React.ReactNode) => void
 }
 
-export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) => {
+export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMiddleControls }) => {
   const location = useLocation()
   const {
     bookUUID,
@@ -42,7 +43,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   const listRef = useRef<List>(null)
   const initialPageRef = useRef<number>(bookCurrentPage)
 
-  const [listHeight, setListHeight] = useState(window.innerHeight - 90)
+  const [listHeight, setListHeight] = useState(window.innerHeight - 40)
 
   const varPageSizeArr = [
     25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500
@@ -57,6 +58,8 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   // pageSize state
   const [pageSize, setPageSize] = useState<number>(590)
 
+  const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
+
   useEffect(() => {
     if (!bookUUID) return
 
@@ -66,7 +69,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
 
   // updates height of pdf viewer list when height of app window is resized
   useEffect(() => {
-    const updateHeight = (): void => setListHeight(window.innerHeight - 90)
+    const updateHeight = (): void => setListHeight(window.innerHeight - 40)
 
     window.addEventListener('resize', updateHeight)
 
@@ -121,19 +124,91 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   // set title bar controls
   useEffect(() => {
     // clear title bar controls
-    setTitleBarControls(null)
+    setLeftControls(null)
+    setMiddleControls(null)
 
     // set back button to navigate back to reader
-    setTitleBarControls(
-      <ActionIcon
-        variant="outline"
-        className="sub-button"
-        aria-label="Settings"
-        onClick={() => navigate(-1)}
-      >
-        <FaArrowLeft />
-      </ActionIcon>
+    setLeftControls(
+      <>
+        <ControlActionButton
+          aria-label="Settings"
+          onClick={() => navigate(-1)}
+        >
+          <FaArrowLeft />
+        </ControlActionButton>
+        
+      </>
     )
+    
+    // set middle controls
+    setMiddleControls(
+      <>
+        <Text className={classes.title}>
+          {bookTitle}
+        </Text>
+        <div className={classes['pdf-controls']}>
+          <div className={classes.center}>
+            <div className={classes['control-group']}>
+              <NumberInput
+                value={currentPage}
+                aria-label="Current page input"
+                onBlur={(e) => handlePageChange(e.currentTarget.value)}
+                className={classes['page-input']}
+                allowDecimal={false}
+                allowNegative={false}
+                min={0}
+                max={bookTotalNumPages}
+                hideControls
+                defaultValue={bookCurrentPage}
+              />
+              <Text className={classes['page-total']}>{`/ ${bookTotalNumPages}`}</Text>
+            </div>
+
+            <Divider
+              className={classes.divider}
+              orientation="vertical"
+              size="sm"
+              h={20}
+              color="#717375"
+            />
+            <div className={classes['control-group']}>
+              <ControlActionButton
+                aria-label="Decrease page size button"
+                onClick={handlePageSizeMinus}
+              >
+                <AiOutlineMinus style={{ width: '70%', height: '70%' }} />
+              </ControlActionButton>
+              <NumberInput
+                value={varPageSize}
+                aria-label="Current size of page in percentage"
+                allowDecimal={false}
+                allowNegative={false}
+                min={25}
+                max={500}
+                defaultValue={100}
+                suffix="%"
+                hideControls
+                className={classes['size-percent']}
+                onBlur={(e) => handlePageSizeChange(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePageSizeChange(e.currentTarget.value)
+                  }
+                }}
+              />
+              <ControlActionButton
+                aria-label="Increase page size button"
+                onClick={handlePageSizePlus}
+              >
+                <AiOutlinePlus style={{ width: '70%', height: '70%' }} />
+              </ControlActionButton>
+            </div>
+          </div>
+        </div>
+      </>
+    )
+
+
   }, [])
 
   // handlePageChange handles page changes
@@ -228,80 +303,10 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setTitleBarControls }) =
   return (
     <>
       <Stack gap={0} className={classes['reader-page']}>
-        <div className={classes['pdf-controls']}>
-          <div className={classes.left}>
-            {/*<RxHamburgerMenu /> */}
-            <Text>{`${bookTitle}`}</Text>
-          </div>
-          <div className={classes.center}>
-            <div className={classes['control-group']}>
-              <NumberInput
-                value={currentPage}
-                aria-label="Current page input"
-                onBlur={(e) => handlePageChange(e.currentTarget.value)}
-                className={classes['page-input']}
-                allowDecimal={false}
-                allowNegative={false}
-                min={0}
-                max={bookTotalNumPages}
-                hideControls
-                defaultValue={bookCurrentPage}
-              />
-              <Text className={classes['page-total']}>{`/ ${bookTotalNumPages}`}</Text>
-            </div>
-
-            <Divider
-              className={classes.divider}
-              orientation="vertical"
-              size="sm"
-              h={20}
-              color="#717375"
-            />
-            <div className={classes['control-group']}>
-              <ActionIcon
-                variant="transparent"
-                aria-label="Decrease page size button"
-                color="white"
-                onClick={handlePageSizeMinus}
-              >
-                <AiOutlineMinus style={{ width: '70%', height: '70%' }} />
-              </ActionIcon>
-              <NumberInput
-                value={varPageSize}
-                aria-label="Current size of page in percentage"
-                allowDecimal={false}
-                allowNegative={false}
-                min={25}
-                max={500}
-                defaultValue={100}
-                suffix="%"
-                hideControls
-                className={classes['size-percent']}
-                onBlur={(e) => handlePageSizeChange(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handlePageSizeChange(e.currentTarget.value)
-                  }
-                }}
-              />
-              <ActionIcon
-                variant="transparent"
-                aria-label="Increase page size button"
-                color="white"
-                onClick={handlePageSizePlus}
-              >
-                <AiOutlinePlus style={{ width: '70%', height: '70%' }} />
-              </ActionIcon>
-            </div>
-          </div>
-          <div className={classes.right}>
-            <AiFillPrinter className={classes['sub-controls']} />
-            <IoSettingsSharp className={classes['sub-controls']} />
-          </div>
-        </div>
+        
 
         {/* PDF Viewer */}
-        <div className={classes.reader} ref={containerRef}>
+        <div className={`${classes.reader} ${computedColorScheme === 'dark' ? classes.dark : classes.light}`} ref={containerRef}>
           <PDFViewer
             bookFilePath={bookFilePath}
             listRef={listRef}

@@ -9,19 +9,26 @@
   width: 100%;
   height: 100%;
   overflow-y: auto;
+}
+
+.light {
+  background-color: var(--reader-light-bg);
+}
+
+.dark {
   background-color: #535659;
 }
 
+.title {
+  color: black !important;
+}
+
 .pdf-controls {
-  height: 60px;
-  min-height: 60px;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   padding: 0 48px;
   align-items: center;
-  color: white;
-  background-color: #333639;
 }
 
 .pdf-controls > div {
@@ -87,8 +94,6 @@
   border: none;
   padding: 0;
   text-align: center;
-  background-color: #191b1c;
-  color: white;
 }
 
 .page-total {
@@ -97,7 +102,6 @@
 
 .size-percent {
   width: 40px;
-  background-color: #191b1c;
   margin: 0 5px;
 
 }
@@ -109,8 +113,6 @@
   border-radius: 0;
   border: none;
   padding: 0;
-  color: white;
-  background-color: #191b1c;
 }
 
 

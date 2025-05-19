@@ -23,6 +23,9 @@ body {
   --main: #4b6882;
   --sub: #7b93a5;
 
+  --reader-light-bg: #eaecee;
+  --reader-dark-bg: #262930;
+
   --bg-black: #242424;
 
   --shadow-color: 206deg 17% 33%;
