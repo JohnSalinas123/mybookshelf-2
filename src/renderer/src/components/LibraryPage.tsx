@@ -45,20 +45,22 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 interface LibraryProps {
-  setTitleBarControls: (controls: React.ReactNode) => void
+  setLeftControls: (controls: React.ReactNode) => void
+  setMiddleControls: (controls: React.ReactNode) => void
 }
 
-export const LibraryPage: React.FC<LibraryProps> = ({ setTitleBarControls }) => {
+export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddleControls }) => {
   const [booksDataArray, setBooksDataArray] = useState<BookData[]>([])
   const [loading, setLoading] = useState(true)
   const [saveLoading, setSaveLoading] = useState(false)
 
   useEffect(() => {
-    // clear title bar controls
-    setTitleBarControls(null)
+    // clear control bar
+    setLeftControls(null)
+    setMiddleControls(null)
 
     // set add book button
-    setTitleBarControls(
+    setLeftControls(
       <FileButton onChange={(file) => handleSaveNewBook(file)} accept="application/pdf">
         {(props) => (
           <Button variant="outline" className="sub-button" {...props} radius="sm">

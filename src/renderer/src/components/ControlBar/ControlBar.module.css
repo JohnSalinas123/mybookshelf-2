@@ -3,10 +3,13 @@
   justify-content: center;
   align-items: center;
   max-width: 100%;
-  height: 30px;
+  height: 40px;
   top: 0;
   -webkit-app-region: drag;
   padding: 0px 15px;
+  background-color: #eeeeee;
+  border-bottom: 1px solid #dbdada;
+  box-shadow: 0 0.5px 3px 0 rgba(208, 208, 208, 0.2);
 }
 
 .controls {
@@ -20,10 +23,18 @@
 .left-controls {
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  gap: 20px;
-  height: 100%;
+  gap: 7px;
+  width: 150px;
+}
+
+.middle-controls {
+   display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 7px;
 }
 
 :global .mantine-Button-section {
@@ -32,11 +43,11 @@
 
 :global .sub-button {
   font-size: 12px !important;
-  height: 23px !important;
-  min-height: 23px !important;
-  line-height: 20px !important;
+  line-height: 12px !important;
+  height: 100% !important;
   gap: 0 !important;
   margin: 0 !important;
+  color: #0f87ff !important;
 }
 
 .logo {
@@ -64,10 +75,11 @@
 .right-controls {
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   -webkit-app-region: no-drag;
-  gap: 7px;
+  gap: 10px;
+  width: 150px;
 }
 
 .main-controls {
@@ -92,13 +104,10 @@
   height: 28px !important;
 }
 
-.main-controls li:hover {
-  background-color: #e9e9e9;
-}
-
-.mode-icon {
-  width: 18px;
-  height: 18px;
+.control-icon {
+  width: 20px;
+  height: 20px;
+  color: #8a9299;
 }
 
 .dark-mode {
@@ -119,15 +128,4 @@
   @mixin dark {
     display: block;
   }
-}
-
-.dark {
-  background-color: #323232;
-  border-bottom: 1px solid #424242;
-}
-
-.light {
-  background-color: rgb(255, 255, 255);
-  border-bottom: 1px solid #dbdada;
-  box-shadow: 0 0.5px 3px 0 rgba(208, 208, 208, 0.2);
 }

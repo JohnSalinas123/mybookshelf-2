@@ -4,20 +4,22 @@ import { LibraryPage } from './components/LibraryPage'
 
 import classes from './App.module.css'
 import { ReaderPage } from './components/ReaderPage'
-import { TitleBar } from './components/TitleBar/TitleBar'
+import { ControlBar } from './components/ControlBar/ControlBar'
 import { useState } from 'react'
 import { useComputedColorScheme, useMantineColorScheme } from '@mantine/core'
 
 function App(): JSX.Element {
-  const [titleBarControls, setTitleBarControls] = useState<React.ReactNode>(null)
+  const [leftControls, setLeftControls] = useState<React.ReactNode>(null)
+  const [middleControls, setMiddleControls] = useState<React.ReactNode>(null)
 
   const { setColorScheme } = useMantineColorScheme()
   const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
 
   return (
     <>
-      <TitleBar
-        controls={titleBarControls}
+      <ControlBar
+        leftControls={leftControls}
+        middleControls={middleControls}
         setColorScheme={setColorScheme}
         computedColorScheme={computedColorScheme}
       />
@@ -26,11 +28,11 @@ function App(): JSX.Element {
           <Route
             index
             path="/"
-            element={<LibraryPage setTitleBarControls={setTitleBarControls} />}
+            element={<LibraryPage setLeftControls={setLeftControls} setMiddleControls={setMiddleControls}/>}
           ></Route>
           <Route
             path="/reader"
-            element={<ReaderPage setTitleBarControls={setTitleBarControls} />}
+            element={<ReaderPage setLeftControls={setLeftControls} setMiddleControls={setMiddleControls} />}
           ></Route>
         </Routes>
       </div>

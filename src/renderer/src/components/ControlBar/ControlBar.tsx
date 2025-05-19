@@ -1,21 +1,24 @@
 import { TfiPencilAlt } from 'react-icons/tfi'
 
-import classes from './TitleBar.module.css'
+import classes from './ControlBar.module.css'
 import { ActionIcon, MantineColorScheme, Popover } from '@mantine/core'
 import cx from 'clsx'
+import { IconMoonFilled, IconNote, IconNotes, IconSunFilled } from '@tabler/icons-react';
 
-import { LuMoon, LuSun } from 'react-icons/lu'
 import { useState } from 'react'
 import { NotesEditor } from '../NotesEditor'
+import { ControlActionButton } from '../Buttons/ControlActionButton';
 
-interface TitleBarProps {
-  controls: React.ReactNode
+interface ControlBarProps {
+  leftControls: React.ReactNode,
+  middleControls: React.ReactNode,
   setColorScheme: (value: MantineColorScheme) => void
   computedColorScheme: 'light' | 'dark'
 }
 
-export const TitleBar: React.FC<TitleBarProps> = ({
-  controls,
+export const ControlBar: React.FC<ControlBarProps> = ({
+  leftControls,
+  middleControls,
   setColorScheme,
   computedColorScheme
 }) => {
@@ -25,10 +28,14 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   return (
     <>
       <div
-        className={`${classes['title-bar']} ${computedColorScheme == 'dark' ? classes['dark'] : classes['light']}`}
+        className={classes['title-bar']}
       >
         <div className={classes.controls}>
-          <div className={classes['left-controls']}>{controls}</div>
+          <div className={classes['left-controls']}>{leftControls}</div>
+
+          <div className={classes['middle-controls']}>
+            {middleControls}
+          </div>
 
           <div className={classes['right-controls']}>
             <Popover
@@ -40,14 +47,12 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               arrowSize={12}
             >
               <Popover.Target>
-                <ActionIcon
-                  className="sub-button"
-                  variant="outline"
+                <ControlActionButton
                   onClick={() => setNotesPopOpened((prevState) => !prevState)}
                   aria-label="Toggle display of notes modal"
                 >
-                  <TfiPencilAlt className={classes['theme-icon']} />
-                </ActionIcon>
+                  <IconNote className={classes['control-icon']} />
+                </ControlActionButton>
               </Popover.Target>
 
               <Popover.Dropdown>
@@ -55,15 +60,13 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               </Popover.Dropdown>
             </Popover>
 
-            <ActionIcon
-              className={`sub-button`}
+            <ControlActionButton
               onClick={() => setColorScheme(computedColorScheme === 'light' ? 'dark' : 'light')}
-              variant="outline"
               aria-label="Toggle color scheme"
             >
-              <LuSun className={cx(classes['mode-icon'], classes['light-mode'])} />
-              <LuMoon className={cx(classes['mode-icon'], classes['dark-mode'])} />
-            </ActionIcon>
+              <IconSunFilled className={cx(classes['control-icon'], classes['light-mode'])} stroke={1.5}/>
+              <IconMoonFilled className={cx(classes['control-icon'], classes['dark-mode'])} stroke={1.5} />
+            </ControlActionButton>
           </div>
         </div>
       </div>
