@@ -121,7 +121,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
     return (): void => clearInterval(savePageInterval)
   }, [])
 
-  // set title bar controls
+  // set static title bar controls
   useEffect(() => {
     // clear title bar controls
     setLeftControls(null)
@@ -139,7 +139,14 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
         
       </>
     )
-    
+
+
+
+  }, [])
+
+  useEffect(() => {
+    setMiddleControls(null)
+
     // set middle controls
     setMiddleControls(
       <>
@@ -208,8 +215,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
       </>
     )
 
-
-  }, [])
+  }, [currentPage, varPageSize])
 
   // handlePageChange handles page changes
   const handlePageChange = (value: string | number): void => {
