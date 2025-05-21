@@ -1,9 +1,9 @@
 import { Route, Routes } from 'react-router-dom'
 //import { Navbar } from './components/Navbar'
-import { LibraryPage } from './components/LibraryPage'
+import { LibraryPage } from './components/Library/LibraryPage'
 
 import classes from './App.module.css'
-import { ReaderPage } from './components/ReaderPage'
+import { ReaderPage } from './components/Reader/ReaderPage'
 import { ControlBar } from './components/ControlBar/ControlBar'
 import { useState } from 'react'
 import { useComputedColorScheme, useMantineColorScheme } from '@mantine/core'

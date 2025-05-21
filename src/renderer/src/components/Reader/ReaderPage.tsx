@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 import classes from './ReaderPage.module.css'
 import { useEffect, useRef, useState } from 'react'
-import { ActionIcon, Divider, NumberInput, Stack, Text, useComputedColorScheme } from '@mantine/core'
+import { Divider, NumberInput, Stack, Text, useComputedColorScheme } from '@mantine/core'
 import { FaArrowLeft } from 'react-icons/fa'
 
 import { AiOutlineMinus, AiOutlinePlus } from 'react-icons/ai'
@@ -10,7 +10,7 @@ import { AiOutlineMinus, AiOutlinePlus } from 'react-icons/ai'
 import { VariableSizeList as List } from 'react-window'
 import React from 'react'
 import { PDFViewer } from './PDFViewer'
-import { ControlActionButton } from './Buttons/ControlActionButton'
+import { ControlActionButton } from '../Buttons/ControlActionButton'
 
 interface ReaderPageProps {
   setLeftControls: (controls: React.ReactNode) => void
@@ -92,6 +92,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
     }
   }, [currentPage])
 
+  // save page changes
   useEffect(() => {
     const savePageInterval = setInterval(async () => {
       try {
@@ -125,7 +126,6 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
   useEffect(() => {
     // clear title bar controls
     setLeftControls(null)
-    setMiddleControls(null)
 
     // set back button to navigate back to reader
     setLeftControls(
@@ -144,6 +144,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
 
   }, [])
 
+  // set middle controls
   useEffect(() => {
     setMiddleControls(null)
 

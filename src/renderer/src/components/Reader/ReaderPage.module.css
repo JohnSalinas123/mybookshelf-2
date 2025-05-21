@@ -8,15 +8,15 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 .light {
-  background-color: var(--reader-light-bg);
+  background-color: var(--light-bg);
 }
 
 .dark {
-  background-color: #535659;
+  background-color: var(--dark-bg);
 }
 
 .title {
