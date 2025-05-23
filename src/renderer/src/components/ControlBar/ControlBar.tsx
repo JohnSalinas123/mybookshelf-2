@@ -1,13 +1,14 @@
 import { TfiPencilAlt } from 'react-icons/tfi'
 
 import classes from './ControlBar.module.css'
-import { ActionIcon, MantineColorScheme, Popover } from '@mantine/core'
+import { ActionIcon, Divider, MantineColorScheme, Popover } from '@mantine/core'
 import cx from 'clsx'
 import { IconMoonFilled, IconNote, IconNotes, IconSunFilled } from '@tabler/icons-react';
 
 import { useState } from 'react'
 import { NotesEditor } from '../NotesEditor'
 import { ControlActionButton } from '../Buttons/ControlActionButton';
+import { ControlDivider } from './ControlDivider';
 
 interface ControlBarProps {
   leftControls: React.ReactNode,
@@ -28,7 +29,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   return (
     <>
       <div
-        className={classes['title-bar']}
+        className={classes['control-bar']}
       >
         <div className={classes.controls}>
           <div className={classes['left-controls']}>{leftControls}</div>
@@ -59,7 +60,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
                 <NotesEditor />
               </Popover.Dropdown>
             </Popover>
-
+            <ControlDivider />
             <ControlActionButton
               onClick={() => setColorScheme(computedColorScheme === 'light' ? 'dark' : 'light')}
               aria-label="Toggle color scheme"
