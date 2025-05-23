@@ -23,10 +23,11 @@ body {
   --main: #4b6882;
   --sub: #7b93a5;
 
-  --reader-light-bg: #eaecee;
-  --reader-dark-bg: #262930;
+  --light-bg: #eaecee;
+  --dark-bg: #262930;
 
-  --bg-black: #242424;
+  --button-main: #8a9299;
+  --v-divider: #dee2e6;
 
   --shadow-color: 206deg 17% 33%;
   --shadow-elevation-low:
