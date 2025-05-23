@@ -8,12 +8,14 @@ import { fromPath } from 'pdf2pic'
 
 import { BookData, DeletedBookData } from '../../types/BookData'
 import { randomUUID } from 'crypto'
+import { gmConvert } from '../ utility/gmagic'
 
-const bookCopyDirPath = path.join(app.getPath('userData'), 'books')
+const booksDirPath = path.join(app.getPath('userData'), 'books')
 const thumbnailDirPath = path.join(app.getPath('userData'), 'thumbnails')
 const dataDirPath = path.join(app.getPath('userData'), 'data')
 const bookDataFilePath = path.join(dataDirPath, 'books.json')
 const deletedBookDataFilePath = path.join(dataDirPath, 'deleted-books.json')
+
 
 // setupBookIpcHandlers sets up ipc handlers for book operations
 export const setupBookIpcHandlers = async (): Promise<void> => {
@@ -30,7 +32,7 @@ export const setupBookIpcHandlers = async (): Promise<void> => {
 // getBooksData: retrives book data
 const getBooksData = async (): Promise<void> => {
   // make directories and files for book data if they don't exist
-  await fs.mkdir(bookCopyDirPath, { recursive: true }).catch(console.error)
+  await fs.mkdir(booksDirPath, { recursive: true }).catch(console.error)
   await fs.mkdir(thumbnailDirPath, { recursive: true }).catch(console.error)
   await fs.mkdir(dataDirPath, { recursive: true }).catch(console.error)
 
@@ -63,88 +65,121 @@ const getBooksData = async (): Promise<void> => {
 const saveNewBook = async (): Promise<void> => {
   ipcMain.handle('save-new-book', async (_event, filePath) => {
     try {
-      const fileName = path.basename(filePath)
-      const bookFileCopyPath = path.join(bookCopyDirPath, fileName)
+
+      // get original book title from filePath
+      const originalFileName = path.basename(filePath)
+      const rawBookExt = path.extname(originalFileName).toLowerCase()
+      const bookFileExt = rawBookExt.slice(1)
+      const originalBookTitle = originalFileName.replace(rawBookExt, '')
+
+      const bookFileUUID = randomUUID()
+      const bookUUIDFileName = `${bookFileUUID}.${bookFileExt}`
+
+      const newBookStoragePath = path.join(booksDirPath, bookUUIDFileName)
 
       // copy book to storage
-      await fs.copyFile(filePath, bookFileCopyPath)
+      try {
+         await fs.copyFile(filePath, newBookStoragePath)
+      } catch (err) {
+        throw new Error(`Failed to copy book file to books dir: ${err}`)
+      }
+     console.log("Saved book file to books dir")
 
       // read book as a buffer
-      const pdfBuffer = await fs.readFile(bookFileCopyPath)
+      const bookBuffer = await fs.readFile(newBookStoragePath)
 
       // TODO: generalize to work for other e-book file types, such as epub
       // extract number of pages
-      const pdfInfo = await pdf(pdfBuffer)
+      const pdfInfo = await pdf(bookBuffer)
       const numPages = pdfInfo.numpages
 
-      // format filename for saving thumbnail
-      //const fileNameTrim = fileName.replace('.pdf', '')
-
-      const fileNameTrim = randomUUID()
-
-      console.log('Filepath:', filePath)
-      console.log('Filename:', fileName)
-      console.log('Filename trimmed:', fileNameTrim)
 
       // generate first-page thumbnail
-      const converter = fromPath(bookFileCopyPath, {
-        density: 150,
-        saveFilename: fileNameTrim,
-        savePath: thumbnailDirPath,
-        format: 'png',
-        width: 300
-      })
-
-      //
+      const thumbnailFileUUID = randomUUID()
       const thumbnailDefaultPage = 1
+      const thumbnailExt = 'png'
+      
+      const thumbnailTempFileUUID = randomUUID()
+
+      const converter = fromPath(newBookStoragePath, {
+        density: 150,
+        saveFilename: thumbnailTempFileUUID,
+        savePath: thumbnailDirPath,
+        width: 400
+      })
 
       try {
         await converter(thumbnailDefaultPage, { responseType: 'image' })
-      } catch (err) {
-        console.error('Error generating thumbnail:', err)
+      } catch (error) {
+        throw new Error(`Failed to generate new thumnaib`)
       }
+      
+
+      const newthumbnailStoragePath = path.join(thumbnailDirPath, `${thumbnailFileUUID}.${thumbnailDefaultPage}.${thumbnailExt}`)
+      const thumbanailTempFilePath = path.join(thumbnailDirPath, `${thumbnailTempFileUUID}.${thumbnailDefaultPage}.${thumbnailExt}`)
+      await gmConvert(thumbanailTempFilePath, newthumbnailStoragePath)
+      
+
+      console.log("Saved new thumbnail")
+
+      // delete temp thumbnail
+      try {
+        await fs.unlink(thumbanailTempFilePath)
+      } catch(err) {
+        throw new Error(`Failed to delete book temp thumbnail: ${err}`)
+      }
+      console.log("Deleted temp thumbnail")
 
       let booksDataJson: BookData[] = []
       try {
         const booksData = await fs.readFile(bookDataFilePath, 'utf-8')
         booksDataJson = JSON.parse(booksData)
       } catch (err) {
-        console.log('Metadata file not found, creating a new one')
+        console.log('Books json file not found, creating a new one')
       }
 
-      // thumbnail url
-      const thumbnailURL = `app://thumbnails/${fileNameTrim}.${thumbnailDefaultPage}.png`
+      // thumbnail access path
+      const thumbnailAccessPath = `app://thumbnails/${thumbnailFileUUID}.${thumbnailDefaultPage}.${thumbnailExt}`
+
+      // file access path
+      const file_access_path = `app://books/${bookFileUUID}.${bookFileExt}`
 
       // uuid for pdf in metadata file
-      const bookUUID = crypto.randomUUID()
+      const bookEntryUUID = crypto.randomUUID()
 
-      // create_at, updated_at timestamp
+      // initial timestamp for created_at, updated_at
       const timestamp = new Date().toISOString()
 
       const newBookObj: BookData = {
-        id: bookUUID,
-        title: fileName.replace('.pdf', ''),
+        id: bookEntryUUID,
+        title: originalBookTitle,
         completed: false,
-        file_name: fileNameTrim,
-        file_name_complete: fileName,
-        file_path: bookFileCopyPath,
-        num_pages: numPages,
-        cur_page: 0,
+        file_id: bookFileUUID,
+        file_ext: bookFileExt,
+        file_access_path: file_access_path,
+        total_pages: numPages,
+        view_state: {
+          cur_page: 1,
+          zoom_level: 100,
+          zoom_index: 7,
+        },
+        thumbnail_id: thumbnailFileUUID,
+        thumbnail_ext: thumbnailExt,
         thumbnail_page: thumbnailDefaultPage,
-        zoom_level: 100,
-        zoom_index: 7,
-        thumbnail_path: thumbnailURL,
+        thumbnail_access_path: thumbnailAccessPath,
         created_at: timestamp,
         updated_at: timestamp
       }
 
-      // add new book info to metadata
+      // add new book data to json
       booksDataJson.push(newBookObj)
+      console.log("Added book to books json")
 
       // TODO: test efficiency of loading entire metadata every time a book is added
       // -> find better way to appending to existing metadata
       // save updated metadata
       await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2))
+
 
       return {
         success: true,
@@ -176,7 +211,7 @@ const saveBookCurrentPage = async (): Promise<void> => {
       // update books.json with new currentPage for book with specific uuid
       for (const bookDataItem of booksDataJson) {
         if (bookDataItem.id === uuid) {
-          bookDataItem.cur_page = currentPage
+          bookDataItem.view_state.cur_page = currentPage
           bookSavedBool = true
           break
         }
@@ -212,8 +247,8 @@ const saveBookZoomAndIndex = async (): Promise<void> => {
       // update metadata.json with new page zoom and zoom index for book with specific UUID arg
       for (const bookMetaData of booksDataJson) {
         if (bookMetaData.id === uuid) {
-          bookMetaData.zoom_level = pageZoom
-          bookMetaData.zoom_index = pageZoomIndex
+          bookMetaData.view_state.zoom_level = pageZoom
+          bookMetaData.view_state.zoom_index = pageZoomIndex
           break
         }
       }
@@ -274,6 +309,9 @@ const deleteBook = async (): Promise<void> => {
     let booksDataJson: BookData[] = []
 
     try {
+
+      console.log(`Attempting to delete book ${uuid}`)
+
       try {
         const booksData = await fs.readFile(bookDataFilePath, 'utf-8')
         booksDataJson = JSON.parse(booksData)
@@ -289,6 +327,27 @@ const deleteBook = async (): Promise<void> => {
         return { success: false, error: `Book with id ${uuid} not found` }
       }
 
+      // delete book file
+      try {
+        const bookFileName = `${bookToDelete.file_id}.${bookToDelete.file_ext}`
+        const bookFilePath = path.join(booksDirPath, bookFileName)
+        await fs.unlink(bookFilePath)
+      } catch(err) {
+        throw new Error(`Failed to delete book file: ${err}`)
+      }
+      console.log(`Deleted book file ${uuid}`)
+
+      // delete book thumbnail
+      try {
+        const thumbnailFileName = `${bookToDelete.thumbnail_id}.${bookToDelete.thumbnail_page}.${bookToDelete.thumbnail_ext}`
+        const thumbnailFilePath = path.join(thumbnailDirPath, thumbnailFileName)
+        await fs.unlink(thumbnailFilePath)
+      } catch(err) {
+        throw new Error(`Failed to delete book thumbnail: ${err}`)
+      }
+      console.log(`Deleted book thumbnail ${uuid}`)
+
+      // delete book from books json data
       const updatedBooksAfterDeletion = booksDataJson.filter((book) => book.id !== uuid)
 
       await fs.writeFile(
@@ -297,7 +356,7 @@ const deleteBook = async (): Promise<void> => {
         'utf-8'
       )
 
-      console.log(`Successfully deleleted book with uuid ${uuid}`)
+      console.log(`Deleted book from books.json ${uuid}`)
 
       // save deleted book to deleted-books.json
       let deletedBooksDataJson: DeletedBookData[] = []
@@ -325,12 +384,14 @@ const deleteBook = async (): Promise<void> => {
         'utf-8'
       )
 
+      console.log(`Added data to deleted_books.json ${uuid}`)
+
       return {
         success: true
       }
     } catch (error) {
-      console.log('Error fetching books data:', error)
-      return { success: false, error: `Failed to save new book ${error}` }
+      console.log('Error deleting book:', error)
+      return { success: false, error: `Failed to delete book ${error}` }
     }
   })
 }
@@ -339,6 +400,9 @@ const deleteBook = async (): Promise<void> => {
 const bookSingleFieldUpdater = async (): Promise<void> => {
   ipcMain.handle('update-book-field', async (_event, uuid, field, value) => {
     let booksDataJson: BookData[] = []
+
+    // handle single nested fields
+    const fieldsArray = field.split('.')
 
     try {
       try {
@@ -352,9 +416,24 @@ const bookSingleFieldUpdater = async (): Promise<void> => {
       let bookSavedBool = false
 
       // update books.json with new currentPage for book with specific uuid
+
       for (const bookDataItem of booksDataJson) {
         if (bookDataItem.id === uuid) {
-          bookDataItem[field] = value
+
+          if (fieldsArray.length == 0) {
+            throw new Error(`Missing field(s) in single field updater`)
+          }
+
+          if (fieldsArray.length > 2) {
+            throw new Error(`Fields limit exceeded at ${fieldsArray.length}`)
+          }
+
+          if (fieldsArray.length == 2) {
+            bookDataItem[fieldsArray[0]][fieldsArray[1]] = value
+          } else {
+            bookDataItem[field] = value
+          }
+
           bookSavedBool = true
           break
         }
@@ -371,9 +450,9 @@ const bookSingleFieldUpdater = async (): Promise<void> => {
         updated_field: field,
         updated_value: value
       }
-    } catch (error) {
-      console.log(`Error updating ${field} with ${value} for book ${uuid}`, error)
-      return { success: false, error: `Failed to update ${field}: ${error}` }
+    } catch (err) {
+      console.log(`Error updating ${field} with ${value} for book ${uuid}`, err)
+      return { success: false, error: `Failed to update ${field}: ${err}` }
     }
   })
 }
@@ -399,27 +478,27 @@ const updateBookThumbnailPage = async (): Promise<void> => {
         throw new Error(`No book found with uuid: ${uuid}`)
       }
 
-      if (!bookDataItem.thumbnail_path || bookDataItem.thumbnail_path == '') {
-        throw new Error(`Missing thumbnail path for book with uuid ${uuid}`)
+      if (!bookDataItem.thumbnail_id || bookDataItem.thumbnail_id == '' || !bookDataItem.thumbnail_ext
+        || bookDataItem.thumbnail_ext == ''
+      ) {
+        throw new Error(`Missing thumbnail_id or thumbnail_ext for book with uuid ${uuid}`)
       }
 
-      if (!bookDataItem.file_path || bookDataItem.file_path == '') {
-        throw new Error(`Missing file path for book with uuid ${uuid}`)
+      if (!bookDataItem.file_id || bookDataItem.file_id == '' || !bookDataItem.file_ext || bookDataItem.file_ext == '') {
+        throw new Error(`Missing file_id or file_ext for book with uuid ${uuid}`)
       }
 
-      const thumbnailFileName = path.basename(bookDataItem.thumbnail_path)
-      // TODO: generalize to work with other file formats
-      const thumbnailFileNameTrimmed = thumbnailFileName.replace(
-        `.${bookDataItem.thumbnail_page}.png`,
-        ''
-      )
+
+      const bookFileName = `${bookDataItem.file_id}.${bookDataItem.file_ext}`
+      const bookFilePath = path.join(booksDirPath, bookFileName)
+      
 
       // generate new page as thumbnail
-      const converter = fromPath(bookDataItem.file_path, {
+      const converter = fromPath(bookFilePath, {
         density: 150,
-        saveFilename: thumbnailFileNameTrimmed,
+        saveFilename: bookDataItem.thumbnail_id,
         savePath: thumbnailDirPath,
-        format: 'png',
+        format: bookDataItem.thumbnail_ext,
         width: 300
       })
 
@@ -427,35 +506,46 @@ const updateBookThumbnailPage = async (): Promise<void> => {
         await converter(page, { responseType: 'image' })
       } catch (error) {
         throw new Error(
-          `Failed to generate thumbnail for book uuid ${uuid}: ${error instanceof Error ? error.message : String(error)}`
+          `Failed to generate new thumbnail for book uuid ${uuid}: ${error instanceof Error ? error.message : String(error)}`
         )
       }
 
       // delete old thumbnail
-      const oldThumbnailPath = path.join(thumbnailDirPath, thumbnailFileName)
       try {
-        console.log(oldThumbnailPath)
-        await fs.unlink(oldThumbnailPath)
-        console.log(`Deleted old thumbnail: ${oldThumbnailPath}`)
-      } catch (error) {
-        if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
-          throw new Error(`Failed to delete old thumbnail: ${error}`)
-        } else {
-          console.warn(`Old thumbnail not found, skipping delete: ${oldThumbnailPath}`)
-        }
+        const oldThumbnailStoragePath = path.join(thumbnailDirPath, `${bookDataItem.thumbnail_id}.${bookDataItem.thumbnail_page}.${bookDataItem.thumbnail_ext}`)
+        await fs.unlink(oldThumbnailStoragePath)
+      } catch(err) {
+        throw new Error(`Failed to delete book temp thumbnail: ${err}`)
       }
+      console.log("Deleted old thumbnail")
+
+      const tempThumbnailStoragePath = path.join(thumbnailDirPath, `${bookDataItem.thumbnail_id}.${page}.${bookDataItem.thumbnail_ext}`)
+      const newThumbnailUUID = randomUUID()
+      const newThumbnailStoragePath = path.join(thumbnailDirPath, `${newThumbnailUUID}.${page}.${bookDataItem.thumbnail_ext}`)
+      await gmConvert(tempThumbnailStoragePath, newThumbnailStoragePath)
+
+      console.log(`Post processed image at ${tempThumbnailStoragePath} and outputed at ${newThumbnailStoragePath}`)
+
+      // delete temp thumbnail
+      try {
+        await fs.unlink(tempThumbnailStoragePath)
+      } catch(err) {
+        throw new Error(`Failed to delete book temp thumbnail: ${err}`)
+      }
+      console.log("Deleted temp thumbnail")
 
       // update thumbnail_page and save books data back to file
-      const newThumbnailPath = `app://thumbnails/${bookDataItem.file_name}.${page}.png`
+      const newThumbnailAccessPath = `app://thumbnails/${newThumbnailUUID}.${page}.${bookDataItem.thumbnail_ext}`
+      bookDataItem.thumbnail_id = newThumbnailUUID
       bookDataItem.thumbnail_page = page
-      bookDataItem.thumbnail_path = newThumbnailPath
+      bookDataItem.thumbnail_access_path = newThumbnailAccessPath
 
       await fs.writeFile(bookDataFilePath, JSON.stringify(booksDataJson, null, 2))
 
       return {
         success: true,
+        thumbnail_access_path: newThumbnailAccessPath,
         thumbnail_page: page,
-        thumbnail_path: newThumbnailPath
       }
     } catch (error) {
       console.error(`Error updating book thumbnail page: ${error}`)
@@ -463,3 +553,4 @@ const updateBookThumbnailPage = async (): Promise<void> => {
     }
   })
 }
+
