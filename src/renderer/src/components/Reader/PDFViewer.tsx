@@ -7,17 +7,17 @@ import classes from './PDFViewer.module.css'
 import { Center, Loader } from '@mantine/core'
 
 interface PDFViewerProps {
-  bookFilePath: string
+  fileAccessPath: string
   listRef: React.RefObject<List>
   listHeight: number
-  numPages: number
+  totalPages: number
   initialPage: number
   pageSize: number
   setCurrentPage: (page: number) => void
 }
 
 export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
-  ({ bookFilePath, listRef, listHeight, numPages, initialPage, pageSize, setCurrentPage }) => {
+  ({ fileAccessPath, listRef, listHeight, totalPages, initialPage, pageSize, setCurrentPage }) => {
 
     const [pageHeight, setPageHeight] = useState<number>(800)
     const SPACER_HEIGHT = 16
@@ -51,13 +51,13 @@ export const PDFViewer: React.FC<PDFViewerProps> = React.memo(
 
     return (
       <div style={{ width: pageSize }}>
-        <Document loading={<PDFLoadingPage pageHeight={pageHeight} />} file={bookFilePath} onLoadSuccess={setPdfDocument} className={classes.document} renderMode="canvas">
+        <Document loading={<PDFLoadingPage pageHeight={pageHeight} />} file={fileAccessPath} onLoadSuccess={setPdfDocument} className={classes.document} renderMode="canvas">
           <List
             ref={listRef}
             className={classes['page-list']}
             width="100%"
             height={listHeight}
-            itemCount={numPages}
+            itemCount={totalPages}
             itemSize={getPageHeight}
             estimatedItemSize={800}
             overscanCount={1}

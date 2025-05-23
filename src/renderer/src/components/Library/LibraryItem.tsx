@@ -25,7 +25,6 @@ import { HiOutlineTrash } from 'react-icons/hi'
 import classes from './LibraryItem.module.css'
 import { UUID } from 'crypto'
 import { BiSave } from 'react-icons/bi'
-import { BookData } from '../../../../types/BookData'
 
 if (process.env.NODE_ENV === 'development') {
   // In dev, the public folder is served at root:
@@ -40,87 +39,84 @@ if (process.env.NODE_ENV === 'development') {
 
 
 interface LibraryItemProps {
-  bookUUID: UUID
-  bookFileName: string
-  bookTitle: string | null
-  bookCompleted: boolean
-  bookTotalNumPages: number
-  bookCurrentPage: number
-  bookThumbnailPage: number
-  bookZoomLevel: number
-  bookZoomIndex: number
-  bookThumbnailURL: string
+  id: UUID
+  title: string | null
+  completed: boolean
+  totalPages: number
+  curPage: number
+  thumbnailPage: number
+  zoomLevel: number
+  zoomIndex: number
+  thumbnailAccessPath: string
+  fileAccessPath: string
   handleDeleteBook: (uuid: UUID) => void
-  updateBookField: (uuid: UUID, field: keyof BookData, value: BookData[typeof field]) => void
+  updateBookField: (uuid: UUID, field: string, value: any) => void
   updateBookThumbnailPage: (uuid: UUID, page: number) => void
 }
 
 export const LibraryItem: React.FC<LibraryItemProps> = ({
-  bookUUID,
-  bookFileName,
-  bookTitle,
-  bookCompleted,
-  bookTotalNumPages,
-  bookCurrentPage,
-  bookThumbnailPage,
-  bookZoomLevel,
-  bookZoomIndex,
-  bookThumbnailURL,
+  id,
+  title,
+  completed,
+  totalPages,
+  curPage,
+  thumbnailPage,
+  zoomLevel,
+  zoomIndex,
+  thumbnailAccessPath,
+  fileAccessPath,
   handleDeleteBook,
   updateBookField,
   updateBookThumbnailPage
 }) => {
-  const [bookTitleState, setBookTitleState] = useState<string>(bookTitle || 'No title found')
-  const [bookCompletedState, setBookCompletedState] = useState<boolean>(bookCompleted)
-  const [bookCurrentPageState, setCurrentPageState] = useState<number | string>(bookCurrentPage)
+  const [bookTitleState, setBookTitleState] = useState<string>(title || 'No title found')
+  const [bookCompletedState, setBookCompletedState] = useState<boolean>(completed)
+  const [bookCurrentPageState, setCurrentPageState] = useState<number | string>(curPage)
   const [bookThumbnailPageState, setBookThumnailPageState] = useState<number | string>(
-    bookThumbnailPage
+    thumbnailPage
   )
 
   const navigate = useNavigate()
 
   const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
 
-  const percentageRead = (bookCurrentPage / bookTotalNumPages) * 100
+  const percentageRead = (curPage / totalPages) * 100
 
   // handleOpenBook navigates to reader and passes book data
   const handleOpenBook = (): void => {
     // TODO: change to be more general when added file_type to book data
     // make more general to work with other types of e-book formats
-    const bookFilePath = `app://books/${bookFileName}`
-    console.log(bookFilePath)
-    console.log('LIBRARY PAGE ZOOM:', bookZoomLevel, bookZoomIndex)
     navigate(`/reader`, {
       state: {
-        bookUUID,
-        bookTitle,
-        bookFilePath,
-        bookTotalNumPages,
-        bookCurrentPage,
-        bookZoomLevel,
-        bookZoomIndex
+        id,
+        title,
+        totalPages,
+        curPage,
+        zoomLevel,
+        zoomIndex,
+        fileAccessPath
       }
     })
   }
 
   const handleSaveTitle = async (): Promise<void> => {
-    updateBookField(bookUUID, 'title', bookTitleState)
+    updateBookField(id, 'title', bookTitleState)
   }
 
   const handleSaveNewCurrentPage = async (): Promise<void> => {
-    updateBookField(bookUUID, 'cur_page', bookCurrentPageState)
+    updateBookField(id, 'view_state.cur_page', bookCurrentPageState)
   }
 
   const handleSaveCompleted = async (checkedVal : boolean): Promise<void> => {
-    updateBookField(bookUUID, 'completed', checkedVal)
+    updateBookField(id, 'completed', checkedVal)
   }
 
   const handleUpdateThumbnailPage = async (): Promise<void> => {
     if (typeof bookThumbnailPageState != 'number' && Number.isFinite(bookThumbnailPageState)) return
 
-    if (bookThumbnailPage == Number(bookThumbnailPageState)) return
+    if (thumbnailPage == Number(bookThumbnailPageState)) return
 
-    updateBookThumbnailPage(bookUUID, Number(bookThumbnailPageState))
+    updateBookThumbnailPage(id, Number(bookThumbnailPageState))
   }
 
   return (
@@ -203,7 +199,7 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
                   </Stack>
                   <Group>
                     <NumberInput
-                      defaultValue={bookThumbnailPage}
+                      defaultValue={thumbnailPage}
                       size="sm"
                       w={60}
                       hideControls
@@ -225,30 +221,30 @@ export const LibraryItem: React.FC<LibraryItemProps> = ({
               <Menu.Item
                 color="red"
                 leftSection={<HiOutlineTrash />}
-                onClick={() => handleDeleteBook(bookUUID)}
+                onClick={() => handleDeleteBook(id)}
               >
                 Delete book
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
         </Group>
-        <div className={classes['thumbnail-box']}>
+        <Paper className={classes['thumbnail-box']} withBorder shadow="xs">
           <Image
             fit="contain"
             className={classes.thumbnail}
             radius="sm"
-            src={bookThumbnailURL}
+            src={thumbnailAccessPath}
             onClick={handleOpenBook}
           />
-        </div>
+        </Paper>
         <div className={classes['title-box']}>
           <Text p={0} className={classes.title}>
-            {bookTitle}
+            {title}
           </Text>
         </div>
         <div className={classes['pageinfo-box']}>
-          <Text>{`${bookCurrentPage}/${bookTotalNumPages}`}</Text>
-          <Progress value={bookCompleted ? 100 : percentageRead} color={`${bookCompleted ? 'grey' : 'blue'}`} />
+          <Text>{`${curPage}/${totalPages}`}</Text>
+          <Progress value={completed ? 100 : percentageRead} color={`${completed ? 'grey' : 'blue'}`} />
         </div>
       </Paper>
     </>

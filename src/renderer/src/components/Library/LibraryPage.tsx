@@ -4,7 +4,6 @@ import { pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import {
-  Button,
   FileButton,
   Loader,
   Skeleton,
@@ -19,6 +18,9 @@ import { SaveBookDataResponse } from 'src/types/SaveBookDataResponse'
 import { GeneralResponse } from 'src/types/GeneralResponse'
 import { LibraryItem } from './LibraryItem'
 import { ControlButton } from '../Buttons/ControlButton'
+import { ControlActionButton } from '../Buttons/ControlActionButton'
+import { IconFilter, IconSearch } from '@tabler/icons-react'
+import { ControlDivider } from '../ControlBar/ControlDivider'
 
 if (process.env.NODE_ENV === 'development') {
   // In dev, the public folder is served at root:
@@ -50,19 +52,34 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddle
 
     // set add book button
     setLeftControls(
-      <FileButton onChange={(file) => handleSaveNewBook(file)} accept="application/pdf">
-        {(props) => (
-          <ControlButton {...props}>
-            Add book
-          </ControlButton>
-        )}
-      </FileButton>
+      <>
+        <FileButton onChange={(file) => handleSaveNewBook(file)} accept="application/pdf">
+          {(props) => (
+            <ControlButton {...props}>
+              Add book
+            </ControlButton>
+          )}
+        </FileButton>
+        <ControlDivider/>
+        <ControlActionButton
+          aria-label="Filter"
+        >
+          <IconFilter style={{ width: '70%', height: '70%' }} stroke={1.5} />
+        </ControlActionButton>
+        <ControlDivider />
+        <ControlActionButton
+          aria-label="Filter"
+        >
+          <IconSearch style={{ width: '70%', height: '70%' }} stroke={1.5} />
+        </ControlActionButton>
+        
+      </>
     )
 
     // fetch books data to load initial view with user's books
     fetchBooksData()
 
-    return (): void => {}
+    return (): void => { }
   }, [])
 
   // fetchBooksData fetches all book data on intial load
@@ -123,8 +140,8 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddle
   // updateBookField updates a book's specified field
   const updateBookField = async (
     uuid: string,
-    field: keyof BookData,
-    value: BookData[typeof field]
+    field: string,
+    value: string
   ): Promise<void> => {
     try {
       const result = await window.electron.ipcRenderer.invoke(
@@ -142,9 +159,24 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddle
       setBooksDataArray((prevBooks) => {
         const updatedBooks = prevBooks.map((book) => {
           if (book.id === uuid) {
-            return {
-              ...book,
-              [field]: value
+
+            const fieldsArray = field.split('.')
+            
+            if (fieldsArray.length == 1) {
+              const [singlefField] = fieldsArray
+              return {
+                ...book,
+                [singlefField]: value
+              }
+            } else if (fieldsArray.length == 2) {
+              const [outerField, innerField] = fieldsArray
+              return {
+                ...book,
+                [outerField]: {
+                  ...book[outerField],
+                  [innerField]: value
+                }
+              }
             }
           }
           return book
@@ -173,7 +205,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddle
             return {
               ...book,
               thumbnail_page: result.thumbnail_page,
-              thumbnail_path: result.thumbnail_path
+              thumbnail_access_path: result.thumbnail_access_path
             }
           }
           return book
@@ -194,38 +226,40 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddle
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            height: '100vh',
-            width: '100vw'
+            
           }}
         >
           <Loader color="blue" size="xl" type="dots" />
         </div>
       ) : (
         <>
-          <div className={`${classes['library-page']} ${computedColorScheme === "light" ? classes.light : classes.dark}`}>
+          <div className={classes['library-page']}>
             <div className={classes['library-grid']}>
               {booksDataArray &&
                 booksDataArray.map((bookData, index) => (
                   <LibraryItem
                     key={index}
-                    bookUUID={bookData.id}
-                    bookCompleted={bookData.completed}
-                    bookFileName={bookData.file_name_complete}
-                    bookTotalNumPages={bookData.num_pages}
-                    bookCurrentPage={bookData.cur_page}
-                    bookThumbnailPage={bookData.thumbnail_page}
-                    bookZoomLevel={bookData.zoom_level}
-                    bookZoomIndex={bookData.zoom_index}
-                    bookTitle={bookData.title}
-                    bookThumbnailURL={bookData.thumbnail_path}
+                    id={bookData.id}
+                    title={bookData.title}
+                    completed={bookData.completed}
+                    totalPages={bookData.total_pages}
+                    curPage={bookData.view_state.cur_page}
+                    thumbnailPage={bookData.thumbnail_page}
+                    zoomLevel={bookData.view_state.zoom_level}
+                    zoomIndex={bookData.view_state.zoom_index}
+                    thumbnailAccessPath={bookData.thumbnail_access_path}
+                    fileAccessPath={bookData.file_access_path}
                     handleDeleteBook={handleDeleteBook}
                     updateBookField={updateBookField}
                     updateBookThumbnailPage={updateBookThumbnailPage}
                   />
                 ))}
-              <Skeleton key={-1} visible={saveLoading}>
+              {saveLoading && (
+                <Skeleton key={-1} visible={saveLoading} className={classes.skeleton}>
                 <div className={classes.skeleton}></div>
               </Skeleton>
+              )}
+              
             </div>
           </div>
         </>

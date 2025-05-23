@@ -20,28 +20,28 @@ interface ReaderPageProps {
 export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMiddleControls }) => {
   const location = useLocation()
   const {
-    bookUUID,
-    bookTitle,
-    bookFilePath,
-    bookTotalNumPages,
-    bookCurrentPage,
-    bookZoomLevel,
-    bookZoomIndex
+    id,
+    title,
+    totalPages,
+    curPage,
+    zoolLevel,
+    zoomIndex,
+    fileAccessPath,
   } = location.state || {}
   const navigate = useNavigate()
 
   // saved state
   //const [pdfPageSaved, setPdfPageSaved] = useState<boolean>(true)
 
-  const [currentPage, setCurrentPage] = useState<number | string>(Number(bookCurrentPage))
-  const [initialPage, setInitialPage] = useState<number>(bookCurrentPage)
-  const [lastSavedPage, setLastSavedPage] = useState<number>(bookCurrentPage)
+  const [currentPage, setCurrentPage] = useState<number | string>(Number(curPage))
+  const [initialPage, setInitialPage] = useState<number>(curPage)
+  const [lastSavedPage, setLastSavedPage] = useState<number>(curPage)
 
-  const [numPages] = useState<number>(bookTotalNumPages || 0)
+  const [numPages] = useState<number>(totalPages || 0)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<List>(null)
-  const initialPageRef = useRef<number>(bookCurrentPage)
+  const initialPageRef = useRef<number>(curPage)
 
   const [listHeight, setListHeight] = useState(window.innerHeight - 40)
 
@@ -51,8 +51,8 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
 
   //console.log("ZOOM bookZoomLevel", bookZoomLevel)
 
-  const [varPageSize, setVarPageSize] = useState<number>(bookZoomLevel || 100)
-  const [varPageSizeIndex, setVarPageSizeIndex] = useState<number>(bookZoomIndex || 7)
+  const [varPageSize, setVarPageSize] = useState<number>(zoolLevel || 100)
+  const [varPageSizeIndex, setVarPageSizeIndex] = useState<number>(zoomIndex || 7)
 
   const baseViewportWidth = 590
   // pageSize state
@@ -61,11 +61,11 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
   const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true })
 
   useEffect(() => {
-    if (!bookUUID) return
+    if (!id) return
 
     // send IPC invoke to update metadata.json, placing this book at the first position
-    window.electron.ipcRenderer.send('update-book-as-recent', bookUUID)
-  }, [bookUUID])
+    window.electron.ipcRenderer.send('update-book-as-recent', id)
+  }, [id])
 
   // updates height of pdf viewer list when height of app window is resized
   useEffect(() => {
@@ -102,20 +102,20 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
 
         const result = await window.electron.ipcRenderer.invoke(
           'update-book-field',
-          bookUUID,
-          'cur_page',
+          id,
+          'view_state.cur_page',
           currentPageVal
         )
 
         if (result?.success) {
-          console.log(`Successfully saved current page ${currentPage} for book ${bookUUID}`)
+          console.log(`Successfully saved current page ${currentPage} for book ${id}`)
           setLastSavedPage(currentPageVal)
           lastSavedPageRef.current = currentPageVal
         } else {
-          console.log(`Failed to save current page for book ${bookUUID}`)
+          console.log(`Failed to save current page for book ${id}`)
         }
       } catch (error) {
-        console.error(`Unexpected error saving page for book ${bookUUID}:`, error)
+        console.error(`Unexpected error saving page for book ${id}:`, error)
       }
     }, 5000)
 
@@ -152,7 +152,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
     setMiddleControls(
       <>
         <Text className={classes.title}>
-          {bookTitle}
+          {title}
         </Text>
         <div className={classes['pdf-controls']}>
           <div className={classes.center}>
@@ -165,11 +165,11 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
                 allowDecimal={false}
                 allowNegative={false}
                 min={0}
-                max={bookTotalNumPages}
+                max={totalPages}
                 hideControls
-                defaultValue={bookCurrentPage}
+                defaultValue={curPage}
               />
-              <Text className={classes['page-total']}>{`/ ${bookTotalNumPages}`}</Text>
+              <Text className={classes['page-total']}>{`/ ${totalPages}`}</Text>
             </div>
 
             <Divider
@@ -240,13 +240,13 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
     if (numValue < minPageSize) {
       setVarPageSize(minPageSize)
       setVarPageSizeIndex(0)
-      window.electron.ipcRenderer.send('save-page-zoom', bookUUID, minPageSize, 0)
+      window.electron.ipcRenderer.send('save-page-zoom', id, minPageSize, 0)
     } else if (numValue > maxPageSize) {
       setVarPageSize(maxPageSize)
       setVarPageSizeIndex(varPageSizeArr.length - 1)
       window.electron.ipcRenderer.send(
         'save-page-zoom',
-        bookUUID,
+        id,
         maxPageSize,
         varPageSizeArr.length - 1
       )
@@ -261,7 +261,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
       }
       setVarPageSize(numValue)
       setVarPageSizeIndex(tempPageIndex)
-      window.electron.ipcRenderer.send('save-page-zoom', bookUUID, numValue, tempPageIndex)
+      window.electron.ipcRenderer.send('save-page-zoom', id, numValue, tempPageIndex)
     }
   }
 
@@ -275,7 +275,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
       setInitialPage(initialPageRef.current)
       window.electron.ipcRenderer.send(
         'save-page-zoom',
-        bookUUID,
+        id,
         varPageSizeArr[newVarPageSizeIndex],
         newVarPageSizeIndex
       )
@@ -291,7 +291,7 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
       setInitialPage(initialPageRef.current)
       window.electron.ipcRenderer.send(
         'save-page-zoom',
-        bookUUID,
+        id,
         varPageSizeArr[newVarPageSizeIndex],
         newVarPageSizeIndex
       )
@@ -313,12 +313,12 @@ export const ReaderPage: React.FC<ReaderPageProps> = ({ setLeftControls, setMidd
         
 
         {/* PDF Viewer */}
-        <div className={`${classes.reader} ${computedColorScheme === 'dark' ? classes.dark : classes.light}`} ref={containerRef}>
+        <div className={classes.reader} ref={containerRef}>
           <PDFViewer
-            bookFilePath={bookFilePath}
+            fileAccessPath={fileAccessPath}
             listRef={listRef}
             listHeight={listHeight}
-            numPages={numPages}
+            totalPages={numPages}
             initialPage={initialPage}
             pageSize={pageSize}
             setCurrentPage={setCurrentPage}
