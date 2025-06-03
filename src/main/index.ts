@@ -4,7 +4,8 @@ import path from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { fileURLToPath } from 'url'
-import { setupBookIpcHandlers } from './ipcHandlers/bookIpcHandlers'
+import { handleBookSingleFieldUpdater, handleDeleteBook, handleGetBooksData, handleSaveBookCurrentPage, handleSaveBookZoomAndIndex, handleSaveNewBook, handleUpdateBookAsMostRecent, handleUpdateBookThumbnailPage } from './ipcHandlers/bookIpcHandlers'
+import { setupAppStorage } from './initialization/setupAppStorage'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -70,8 +71,18 @@ app.whenReady().then(async () => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  // setupBookIpcHandlers setup all book ipcHandlers
-  await setupBookIpcHandlers()
+  // setupAppStorage sets up apps dir and data files
+  await setupAppStorage()
+
+  // register Book ipcHandlers
+  ipcMain.handle('fetch-books-data', handleGetBooksData)
+  ipcMain.handle('save-new-book', handleSaveNewBook)
+  ipcMain.handle('save-book-page', handleSaveBookCurrentPage)
+  ipcMain.handle('save-page-zoom', handleSaveBookZoomAndIndex)
+  ipcMain.handle('update-book-as-recent', handleUpdateBookAsMostRecent)
+  ipcMain.handle('delete-book', handleDeleteBook)
+  ipcMain.handle('update-book-field', handleBookSingleFieldUpdater)
+  ipcMain.handle('update-book-thumbnail', handleUpdateBookThumbnailPage)
 
   createWindow()
 
@@ -111,6 +122,3 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app"s specific main process
-// code. You can also put them in separate files and require them here.
