@@ -21,13 +21,14 @@ const bookDataFilePath = path.join(dataDirPath, 'books.json')
 
 
 // handleGetBookdsData: handles getting books data
-export const handleGetBooksData = async (): Promise<BookData[]> => {
+export const handleGetBooksData = async (): Promise<IpcResponse<BookData[]>> => {
 
     try {
-      return await fetchAllBookData()
+      const booksData: BookData[] = await fetchAllBookData()
+      return {success: true, data: booksData}
     } catch (error) {
-      console.log('Error fetching books data:', error)
-      throw new Error('Failed to fetch books data')
+      console.error(`Error fetching books data: ${error}`)
+      return { success: false, error: `Failed to fetch books data: ${error}` }
     }
 }
 
