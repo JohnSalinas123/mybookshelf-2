@@ -261,7 +261,7 @@ export const handleDeleteBook = async (_event: IpcMainInvokeEvent, uuid: UUID): 
 }
 
 // bookSingleFieldUpdater save book current page
-export const handleBookSingleFieldUpdater = async (_event: IpcMainInvokeEvent, uuid: UUID, field: string, value: string): Promise<IpcResponse<{updated_field: string, updated_value: string}>> => {
+export const handleBookSingleFieldUpdater = async (_event: IpcMainInvokeEvent, uuid: UUID, field: string, value: string): Promise<IpcResponse<void>> => {
     let booksDataJson: BookData[] = []
 
     // handle single nested fields
@@ -312,10 +312,7 @@ export const handleBookSingleFieldUpdater = async (_event: IpcMainInvokeEvent, u
 
       return {
         success: true,
-        data : {
-          updated_field: field,
-          updated_value: value
-        }
+        data : null
         
       }
     } catch (error) {

@@ -14,13 +14,12 @@ import {
 import classes from './LibraryPage.module.css'
 import { UUID } from 'crypto'
 import { BookData } from '../../../../types/BookData'
-import { SaveBookDataResponse } from 'src/types/SaveBookDataResponse'
-import { GeneralResponse } from 'src/types/GeneralResponse'
 import { LibraryItem } from './LibraryItem'
 import { ControlButton } from '../Buttons/ControlButton'
 import { ControlActionButton } from '../Buttons/ControlActionButton'
 import { IconFilter, IconSearch } from '@tabler/icons-react'
 import { ControlDivider } from '../ControlBar/ControlDivider'
+import { IpcResponse } from 'src/types/IpcResponse'
 
 if (process.env.NODE_ENV === 'development') {
   // In dev, the public folder is served at root:
@@ -85,11 +84,19 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddle
   // fetchBooksData fetches all book data on intial load
   const fetchBooksData = async (): Promise<void> => {
     try {
-      const booksData: BookData[] = await window.electron.ipcRenderer.invoke('fetch-books-data')
+      const response: IpcResponse<BookData[]> = await window.electron.ipcRenderer.invoke('fetch-books-data')
+
+      if (!response.success) {
+        throw new Error(response.error)
+      }
+
+      const booksData: BookData[] = response.data ?? []
+
       setBooksDataArray(booksData)
-      setLoading(false)
     } catch (error) {
       console.log('Error fetching all books data:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -100,21 +107,25 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddle
     // send file path to main process
     try {
       setSaveLoading(true)
-      const result: SaveBookDataResponse = await window.electron.ipcRenderer.invoke(
+      const response: IpcResponse<BookData> = await window.electron.ipcRenderer.invoke(
         'save-new-book',
         file.path
       )
 
-      console.log(saveLoading)
-
-      if (result.success) {
-        setBooksDataArray((prevBookData) => [...prevBookData, result.book_data])
-      } else {
-        console.error(result.error)
-        // TODO: show ui error
+      if (!response.success) {
+        throw new Error(response.error)
       }
-    } catch (err) {
-      console.error('Unexpected error saving book:', err)
+
+      if (!response.data) {
+        throw new Error('Book data not received')
+      }
+
+      const bookData: BookData = response.data
+
+      setBooksDataArray((prevBookData) => [...prevBookData, bookData])
+      
+    } catch (error) {
+      console.error('Error saving new book:', error)
     } finally {
       setSaveLoading(false)
     }
@@ -124,16 +135,17 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddle
   const handleDeleteBook = async (uuid: UUID): Promise<void> => {
     // attempt to delete book
     try {
-      const result: GeneralResponse = await window.electron.ipcRenderer.invoke('delete-book', uuid)
+      const response: IpcResponse<void> = await window.electron.ipcRenderer.invoke('delete-book', uuid)
 
-      if (result.success) {
-        setBooksDataArray((prevBookData) => prevBookData.filter((data) => data.id != uuid))
-      } else {
-        console.error(result.error)
-        // TODO: show ui error
+      if (!response.success) {
+        throw new Error(response.error)
       }
+
+
+      setBooksDataArray((prevBookData) => prevBookData.filter((data) => data.id != uuid))
+      
     } catch (err) {
-      console.error('Unexpeceted error deleteing book:', err)
+      console.error('Error deleting book:', err)
     }
   }
 
@@ -144,15 +156,15 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddle
     value: string
   ): Promise<void> => {
     try {
-      const result = await window.electron.ipcRenderer.invoke(
+      const response: IpcResponse<void> = await window.electron.ipcRenderer.invoke(
         'update-book-field',
         uuid,
         field,
         value
       )
 
-      if (!result?.success) {
-        console.log(`Failed to update ${field} for book ${uuid}:`, result?.error)
+      if (!response.success) {
+        throw new Error(response.error)
       }
 
       // on success update state for specific book and field
@@ -184,7 +196,7 @@ export const LibraryPage: React.FC<LibraryProps> = ({ setLeftControls, setMiddle
         return updatedBooks
       })
     } catch (err) {
-      console.error(`Unexpeceted error updating ${field} for book ${uuid}:`, err)
+      console.error(`Error updating ${field} for book ${uuid}:`, err)
     }
   }
 
